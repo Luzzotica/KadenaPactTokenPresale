@@ -1,0 +1,29 @@
+(load "kda-env/init.repl")
+
+(begin-tx "Load swag token environment")
+
+(env-keys ["gov"])
+(env-data 
+  {
+    "free.swag-token-gov": {
+      "keys": ["gov"], "pred": "keys-all"
+    },
+    "init-data": { 
+      "initial-supply": 1000.0, 
+      "accounts":[ 
+        { 
+          "account": "ROOT", 
+          "guard": {
+            "keys": ["gov"], "pred": "keys-all"
+          },
+          "percent": 100.0
+        }
+      ]
+    },
+    "upgrade": false
+  }  
+)
+
+(load "swag-token.pact")
+
+(commit-tx)

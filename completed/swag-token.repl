@@ -1,0 +1,31 @@
+(load "swag-token-env.repl")
+
+
+(begin-tx "Test governance")
+(use free.swag-token)
+
+(env-keys ["test"])
+(expect-failure "Can't acquire GOV cap without gov key"
+  "Keyset failure (keys-all): 'free.swag-token-gov"
+  (test-capability (GOV))
+)
+
+(env-keys ["gov"])
+(expect-that "Can acquire GOV cap with gov key"
+  (= "Capability acquired")
+  (test-capability (GOV))
+)
+
+(commit-tx)
+
+
+
+(begin-tx "Test init and tokenomics")
+(use free.swag-token)
+
+(expect-that "ROOT has tokens"
+  (= 100000.0)
+  (get-balance "ROOT")
+)
+
+(commit-tx)
