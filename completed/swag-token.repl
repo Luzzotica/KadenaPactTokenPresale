@@ -4,6 +4,11 @@
 (begin-tx "Test governance")
 (use free.swag-token)
 
+(env-keys [])
+(expect-failure "Can't acquire GOV cap without gov key"
+  "Keyset failure (keys-all): 'free.swag-token-gov"
+  (test-capability (GOV))
+)
 (env-keys ["test"])
 (expect-failure "Can't acquire GOV cap without gov key"
   "Keyset failure (keys-all): 'free.swag-token-gov"
