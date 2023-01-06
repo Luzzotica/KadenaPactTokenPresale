@@ -1,5 +1,7 @@
 (load "kda-env/init.repl")
 
+
+
 (begin-tx "Load swag token environment")
 
 (env-keys ["gov"])
@@ -16,7 +18,14 @@
           "guard": {
             "keys": ["gov"], "pred": "keys-all"
           },
-          "percent": 100.0
+          "percent": 0.8
+        },
+        { 
+          "account": "LIQUIDITY", 
+          "guard": {
+            "keys": ["gov"], "pred": "keys-all"
+          },
+          "percent": 0.2
         }
       ]
     },

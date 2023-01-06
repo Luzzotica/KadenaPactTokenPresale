@@ -37,6 +37,11 @@
     (with-capability (GOV)
       (let 
         (
+          (sum-percent
+            (lambda (p:decimal account-data)
+              (+ p (at "percent" account-data))
+            )
+          )
           (init-token-account 
             (lambda (initial-supply:decimal account-data)
               (let 
@@ -53,6 +58,14 @@
               )
             )
           )
+        )
+
+        (enforce 
+          (= 
+            1.0 
+            (fold (sum-percent) 0.0 (at "accounts" init-data))
+          )
+          "Percentages must add up to 100%"
         )
 
         (map 
