@@ -23,7 +23,6 @@
 
   (defcap GOV ()
     ;; 2. Enforce the keyset you defined above for governance
-    false
   )
 
   ; --------------------------------------------------------------------------

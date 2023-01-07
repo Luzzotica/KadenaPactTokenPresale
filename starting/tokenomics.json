@@ -1,0 +1,27 @@
+{
+  "init-token": {
+    "initial-supply": 1000.0,
+    "accounts": [
+      {
+        "account": "ROOT",
+        "percent": 0.8,
+        "guard": {
+          "keys": [
+            "aeecd476ad8a4842ec84f3fbdad39b73fe7329fb4feaa3ea4367314a29a7e42b"
+          ],
+          "pred": "keys-all"
+        }
+      },
+      {
+        "account": "LIQUIDITY",
+        "percent": 0.2,
+        "guard": {
+          "keys": [
+            "aeecd476ad8a4842ec84f3fbdad39b73fe7329fb4feaa3ea4367314a29a7e42b"
+          ],
+          "pred": "keys-all"
+        }
+      }
+    ]
+  }
+}

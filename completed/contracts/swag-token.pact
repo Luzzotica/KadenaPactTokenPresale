@@ -60,6 +60,10 @@
           )
         )
 
+        ; Step 1: Validate the percentages add up to 100%
+        ; fold iterations
+        ; Iteration 1: Sum Percent with 0 and ROOT account -> (0 + 0.8) = 0.8
+        ; Iteration 2: Sum Percent with 0.8 and LIQDUIDITY account -> (0.8 + 0.2) = 1.0
         (enforce 
           (= 
             1.0 

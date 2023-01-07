@@ -1,0 +1,25 @@
+(enumerate 0 19)
+(map (+ 1) (enumerate 0 19))
+
+[
+  (+ 1 0)
+  (+ 1 1)
+  (+ 1 2)
+  (+ 1 3)
+  ; ...
+  (+ 1 18)
+  (+ 1 19)
+]
+
+(let
+  (
+    (addition
+      (lambda (a:integer b:integer c:integer)
+        (+ a (+ b (* c 2)))
+      )
+    )
+  )
+  (map (addition 1 2) (enumerate 0 19))
+)
+
+; (int-to-str 10 16) ; "16"
