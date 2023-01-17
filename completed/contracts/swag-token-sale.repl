@@ -1,0 +1,685 @@
+(load "swag-token-env.repl")
+
+(begin-tx "Governance")
+(use free.swag-token-sale)
+
+(env-keys ["test"])
+(expect-failure "Can't acquire gov with test"
+  "Tx Failed: Keyset failure (keys-all): 'free.swag-token-gov"
+  (test-capability (GOV))
+)
+(expect-failure "Can't acquire ops with test"
+  "Tx Failed: Keyset failure (keys-all): 'free.swag-token-ops"
+  (test-capability (OPS))
+)
+
+(env-keys ["gov"])
+(expect-that "Can acquire gov with gov"
+  (= "Capability acquired")
+  (test-capability (GOV))
+)
+
+(env-keys ["ops"])
+(expect-that "Can acquire ops with ops"
+  (= "Capability acquired")
+  (test-capability (OPS))
+)
+
+(commit-tx)
+
+
+(begin-tx "Check the sale, update a sale, test getting tiers")
+(use free.swag-token-sale)
+
+(expect-that "Total supply is correct"
+  (= 5000.0)
+  (get-total-supply-for-sale "test-sale")
+)
+(expect-that "Total sold is correct"
+  (= 0.0)
+  (get-total-sold-for-sale "test-sale")
+)
+
+(let
+  (
+    (times
+      [
+        (time "2000-01-01T00:00:00Z")
+        (time "2000-01-01T23:59:59Z")
+        (time "2000-01-02T00:00:00Z")
+        (time "2000-01-02T23:59:59Z")
+        (time "2000-01-03T00:00:00Z")
+      ]
+    )
+    (expected-tier-ids
+      [
+        "discount"
+        "discount"
+        "public"
+        "public"
+        "public-no-min"
+      ]
+    )
+    (combine
+      (lambda (time tier)
+        { "time": time, "expected-tier-id": tier }
+      )  
+    )
+    (check-tier
+      (lambda (check-data:object)
+        (let
+          (
+            (t (at "time" check-data))
+            (expected-tier-id (at "expected-tier-id" check-data))
+          )
+          ;; Set the block time
+          (env-chain-data { "block-time": t })
+
+          (with-applied-env
+            ;; Get the tier and validate it
+            (expect-that "Tier id is correct"
+              (= expected-tier-id)
+              (at "tier-id" (get-current-tier-for-sale "test-sale"))
+            )
+          )
+        )
+      )  
+    )
+  )  
+  (map (check-tier) (zip (combine) times expected-tier-ids))
+)
+
+;; Test update the tiers
+(expect-that "Update tiers"
+  (= "Write succeeded")
+  (update-sale-tiers
+    "test-sale"
+    [
+      {
+        "tier-id": "free2",
+        "tier-type": "WL",
+        "start-time": (time "2000-01-01T00:00:00Z"),
+        "end-time": (time "2000-01-02T00:00:00Z"),
+        "token-per-fungible": 1.0,
+        "min-token": -1.0,
+        "max-token": 100.0
+      },
+      {
+        "tier-id": "discount2",
+        "tier-type": "WL",
+        "start-time": (time "2000-01-02T00:00:00Z"),
+        "end-time": (time "2000-01-03T00:00:00Z"),
+        "token-per-fungible": 1.0,
+        "min-token": 10.0,
+        "max-token": -1.0
+      },
+      {
+        "tier-id": "public2",
+        "tier-type": "WL",
+        "start-time": (time "2000-01-03T00:00:00Z"),
+        "end-time": (time "2000-01-04T00:00:00Z"),
+        "token-per-fungible": 1.0,
+        "min-token": -1.0,
+        "max-token": -1.0
+      }
+    ]
+  )
+)
+
+(let
+  (
+    (times
+      [
+        (time "2000-01-01T00:00:00Z")
+        (time "2000-01-01T23:59:59Z")
+        (time "2000-01-02T00:00:00Z")
+        (time "2000-01-02T23:59:59Z")
+        (time "2000-01-03T00:00:00Z")
+      ]
+    )
+    (expected-tier-ids
+      [
+        "free2"
+        "free2"
+        "discount2"
+        "discount2"
+        "public2"
+      ]
+    )
+    (combine
+      (lambda (time tier)
+        { "time": time, "expected-tier-id": tier }
+      )  
+    )
+    (check-tier
+      (lambda (check-data:object)
+        (let
+          (
+            (t (at "time" check-data))
+            (expected-tier-id (at "expected-tier-id" check-data))
+          )
+          ;; Set the block time
+          (env-chain-data { "block-time": t })
+
+          (with-applied-env
+            ;; Get the tier and validate it
+            (expect-that "Tier id is correct"
+              (= expected-tier-id)
+              (at "tier-id" (get-current-tier-for-sale "test-sale"))
+            )
+          )
+        )
+      )  
+    )
+  )  
+  (map (check-tier) (zip (combine) times expected-tier-ids))
+)
+
+;; Test update the tiers
+(expect-that "Update tiers"
+  (= "Write succeeded")
+  (update-sale-tiers
+    "test-sale"
+    [
+      {
+        "tier-id": "discount",
+        "tier-type": "WL",
+        "start-time": (time "2000-01-01T00:00:00Z"),
+        "end-time": (time "2000-01-02T00:00:00Z"),
+        "token-per-fungible": 10.0,
+        "min-token": 10.0,
+        "max-token": 100.0
+      },
+      {
+        "tier-id": "public",
+        "tier-type": "PUBLIC",
+        "start-time": (time "2000-01-02T00:00:00Z"),
+        "end-time": (time "2000-01-03T00:00:00Z"),
+        "token-per-fungible": 100.0,
+        "min-token": 10.0,
+        "max-token": -1.0
+      },
+      {
+        "tier-id": "public-no-min",
+        "tier-type": "PUBLIC",
+        "start-time": (time "2000-01-03T00:00:00Z"),
+        "end-time": (time "2000-01-03T00:00:00Z"),
+        "token-per-fungible": 100.0,
+        "min-token": -1.0,
+        "max-token": -1.0
+      }
+    ]
+  )
+)
+
+(commit-tx)
+
+
+(begin-tx "Validate tiers tests")
+(use free.swag-token-sale)
+
+(let
+  (
+    (tiers
+      [
+        [{
+          "tier-id": "free",
+          "tier-type": "BREAK",
+          "start-time": (time "2000-01-01T00:00:00Z"),
+          "end-time": (time "2000-01-02T00:00:00Z"),
+          "token-per-fungible": 100.0,
+          "min-token": -1.0,
+          "max-token": -1.0
+        }],
+        [{
+          "tier-id": "free",
+          "tier-type": "WL",
+          "start-time": (time "2000-01-01T00:00:00Z"),
+          "end-time": (time "1999-01-02T00:00:00Z"),
+          "token-per-fungible": 100.0,
+          "min-token": -1.0,
+          "max-token": -1.0
+        }],
+        [{
+          "tier-id": "free",
+          "tier-type": "WL",
+          "start-time": (time "2000-01-01T00:00:00Z"),
+          "end-time": (time "2000-01-02T00:00:00Z"),
+          "token-per-fungible": -1.0,
+          "min-token": -1.0,
+          "max-token": -1.0
+        }],
+        [{
+          "tier-id": "free",
+          "tier-type": "WL",
+          "start-time": (time "2000-01-01T00:00:00Z"),
+          "end-time": (time "2000-01-02T00:00:00Z"),
+          "token-per-fungible": 10.0,
+          "min-token": 10.0,
+          "max-token": 5.0
+        }],
+        [{
+          "tier-id": "free",
+          "tier-type": "WL",
+          "start-time": (time "2000-01-01T00:00:00Z"),
+          "end-time": (time "2000-01-03T00:00:00Z"),
+          "token-per-fungible": 0.0,
+          "min-token": -1.0,
+          "max-token": -1.0
+        },
+        {
+          "tier-id": "free2",
+          "tier-type": "WL",
+          "start-time": (time "2000-01-02T00:00:00Z"),
+          "end-time": (time "2000-01-04T00:00:00Z"),
+          "token-per-fungible": 100.0,
+          "min-token": -1.0,
+          "max-token": -1.0
+        }],
+        [{
+          "tier-id": "free",
+          "tier-type": "WL",
+          "start-time": (time "2000-01-02T00:00:00Z"),
+          "end-time": (time "2000-01-04T00:00:00Z"),
+          "token-per-fungible": 100.0,
+          "min-token": -1.0,
+          "max-token": -1.0
+        },
+        {
+          "tier-id": "free2",
+          "tier-type": "WL",
+          "start-time": (time "2000-01-01T00:00:00Z"),
+          "end-time": (time "2000-01-03T00:00:00Z"),
+          "token-per-fungible": 100.0,
+          "min-token": -1.0,
+          "max-token": -1.0
+        }],
+        [{
+          "tier-id": "free",
+          "tier-type": "WL",
+          "start-time": (time "2000-01-02T00:00:00Z"),
+          "end-time": (time "2000-01-04T00:00:00Z"),
+          "token-per-fungible": 100.0,
+          "min-token": -1.0,
+          "max-token": -1.0
+        },
+        {
+          "tier-id": "free2",
+          "tier-type": "WL",
+          "start-time": (time "2000-01-03T00:00:00Z"),
+          "end-time": (time "2000-01-03T00:00:00Z"),
+          "token-per-fungible": 100.0,
+          "min-token": -1.0,
+          "max-token": -1.0
+        }]
+      ]
+    )
+    (expected-failures
+      [
+        "Invalid tier type"
+        "Start must be before end"
+        "Token per fungible must be greater than or equal to 0"
+        "min-token must be less than or equal to max-token"
+        "Tiers overlap"
+        "Tiers overlap"
+        "Tiers overlap"
+      ]
+    )
+    (combine
+      (lambda (tiers failure)
+        { "tiers": tiers, "expected-failure": failure }
+      )  
+    )
+    (check-tier
+      (lambda (check-data:object)
+        (let
+          (
+            (tiers (at "tiers" check-data))
+            (expected-failure (at "expected-failure" check-data))
+          )
+
+          (expect-failure "Tier id is correct"
+            expected-failure
+            (validate-tiers tiers)
+          )
+        )
+      )  
+    )
+  )  
+  (map (check-tier) (zip (combine) tiers expected-failures))
+)
+
+(commit-tx)
+
+
+(begin-tx "Whitelist: add, is whitelisted, update count")
+(use free.swag-token-sale)
+
+(let
+  (
+    (expected-is-whitelisted
+      [
+        {"tier-id": "free", "account": "bob", "whitelisted": true, "purchase-amount": 0.0},
+        {"tier-id": "free", "account": "dave", "whitelisted": false, "purchase-amount": -1.0}
+        {"tier-id": "discount", "account": "bob", "whitelisted": true, "purchase-amount": 0.0},
+        {"tier-id": "discount", "account": "alice", "whitelisted": true, "purchase-amount": 0.0},
+        {"tier-id": "discount", "account": "dave", "whitelisted": false, "purchase-amount": -1.0}
+        {"tier-id": "public", "account": "carol", "whitelisted": false, "purchase-amount": -1.0},
+        {"tier-id": "public", "account": "dave", "whitelisted": false, "purchase-amount": -1.0},
+        {"tier-id": "public", "account": "dave", "whitelisted": false, "purchase-amount": -1.0},
+        {"tier-id": "public", "account": "dave", "whitelisted": false, "purchase-amount": -1.0}
+      ]
+    )
+    (check-whitelisted
+      (lambda (whitelist-info:object)
+        (bind whitelist-info
+          { "tier-id":= tier-id
+          , "account":= account
+          , "whitelisted":= whitelisted
+          , "purchase-amount":= purchase-amount
+          }
+          (expect-that "whitelist is correct"
+            (= whitelisted)
+            (is-whitelisted "test-sale" tier-id account)
+          )
+          (expect-that "purchased amount is correct"
+            (= purchase-amount)
+            (get-whitelist-purchase-amount "test-sale" tier-id account)
+          )
+        )
+      )  
+    )
+  )  
+  (map (check-whitelisted) expected-is-whitelisted)
+)
+
+(test-capability (WHITELIST_UPDATE))
+(expect-that "Can update count"
+  (= ["Write succeeded" "Write succeeded" "Write succeeded"])
+  [
+    (update-whitelist-purchase-amount "test-sale" "free" "bob" 1.0)
+    (update-whitelist-purchase-amount "test-sale" "discount" "bob" 1.0)
+    (update-whitelist-purchase-amount "test-sale" "discount" "alice" 2.0)
+  ]
+)
+
+(let
+  (
+    (expected-is-whitelisted
+      [
+        {"tier-id": "free", "account": "bob", "whitelisted": true, "purchase-amount": 1.0},
+        {"tier-id": "discount", "account": "bob", "whitelisted": true, "purchase-amount": 1.0},
+        {"tier-id": "discount", "account": "alice", "whitelisted": true, "purchase-amount": 2.0}
+      ]
+    )
+    (check-whitelisted
+      (lambda (whitelist-info:object)
+        (bind whitelist-info
+          { "tier-id":= tier-id
+          , "account":= account
+          , "whitelisted":= whitelisted
+          , "purchase-amount":= purchase-amount
+          }
+          (expect-that "whitelist is correct"
+            (= whitelisted)
+            (is-whitelisted "test-sale" tier-id account)
+          )
+          (expect-that "purchase amount is correct"
+            (= purchase-amount)
+            (get-whitelist-purchase-amount "test-sale" tier-id account)
+          )
+        )
+      )
+    )
+  )  
+  (map (check-whitelisted) expected-is-whitelisted)
+)
+
+(expect-that "Can update count"
+  (= ["Write succeeded" "Write succeeded" "Write succeeded"])
+  [
+    (update-whitelist-purchase-amount "test-sale" "free" "bob" 0.0)
+    (update-whitelist-purchase-amount "test-sale" "discount" "bob" 0.0)
+    (update-whitelist-purchase-amount "test-sale" "discount" "alice" 0.0)
+  ]
+)
+
+(commit-tx)
+
+
+
+(begin-tx "Reserve, reserve event discount and min/max limits")
+(use free.swag-token-sale)
+(env-chain-data { "block-time": (time "2000-01-01T00:00:00Z")})
+
+;; Clear the events up to this point
+(env-events true)
+
+(expect-failure "Can't purchase below minimum"
+  "Purchase amount is less than minimum"
+  (reserve "test-sale" "bob" 0.5)
+)
+(expect-failure "Can't purchase above maximum"
+  "Purchase limit reached"
+  (reserve "test-sale" "bob" 100.0)
+)
+
+;; Free tier
+(env-keys ["bob-key"])
+(env-sigs [
+  {
+    "key": "bob-key", 
+    "caps": [
+      (coin.GAS)
+      (coin.TRANSFER "bob" (get-fungible-bank-for-sale "test-sale") 2.5)
+    ]
+  }
+])
+(expect-that "Reserving succeeds"
+  (= true)
+  (reserve "test-sale" "bob" 2.0)
+)
+(expect-that "Events emitted" 
+  (= ["test-sale" "bob" 20.0])
+  (at "params" (at 1 (env-events true)))
+)
+  ;  (env-events true)
+(expect-that "Total sold updated"
+  (= 20.0)
+  (get-total-sold-for-sale "test-sale")
+)
+(expect-that "Reserving less than min succeeds if already reserved"
+  (= true)
+  (reserve "test-sale" "bob" 0.5)
+)
+(expect-that "Total sold updated"
+  (= 25.0)
+  (get-total-sold-for-sale "test-sale")
+)
+(expect-failure "Can't reserve if not whitelisted"
+  "Account is not whitelisted"
+  (reserve "test-sale" "dave" 1.0)
+)
+(expect-that "Total sold updated"
+  (= 25.0)
+  (get-total-sold-for-sale "test-sale")
+)
+
+
+(commit-tx)
+
+
+
+(begin-tx "Reserve, reserve event discount")
+(use free.swag-token-sale)
+
+(env-keys ["alice-key" "bob-key"])
+(env-sigs [
+  {
+    "key": "alice-key", 
+    "caps": [
+      (coin.GAS)
+      (coin.TRANSFER "alice" (get-fungible-bank-for-sale "test-sale") 30.0)
+    ]
+  },
+  {
+    "key": "bob-key", 
+    "caps": [
+      (coin.GAS)
+      (coin.TRANSFER "bob" (get-fungible-bank-for-sale "test-sale") 20.0)
+    ]
+  }
+])
+(env-chain-data { "block-time": (time "2000-01-02T00:00:00Z")})
+(expect-that "Reserving succeeds even if below min for bob"
+  (= true)
+  (reserve "test-sale" "bob" 0.1)
+)
+(expect-that "Events emitted" 
+  (= ["test-sale" "bob" 10.0])
+  (at "params" (at 1 (env-events true)))
+)
+(expect-that "Total sold updated"
+  (= 35.0)
+  (get-total-sold-for-sale "test-sale")
+)
+
+(expect-failure "Can't purchase below minimum"
+  "Purchase amount is less than minimum"
+  (reserve "test-sale" "alice" 0.01)
+)
+(expect-failure "Can't purchase more than total supply"
+"Purchase amount exceeds total supply"
+  (reserve "test-sale" "alice" 1000.0)
+)
+(expect-that "Reserving succeeds"
+  (= true)
+  (reserve "test-sale" "alice" 10.0)
+)
+(expect-that "Bank now has money"
+  (= 12.6)
+  (coin.get-balance (get-fungible-bank-for-sale "test-sale"))
+)
+(expect-that "Bob and alice spent money"
+  (= [997.4 990.0])
+  [
+    (coin.get-balance "bob")
+    (coin.get-balance "alice")
+  ]
+)
+(expect-that "Total sold updated"
+  (= 1035.0)
+  (get-total-sold-for-sale "test-sale")
+)
+
+(commit-tx)
+
+
+
+(begin-tx "Payouts")
+(use free.swag-token-sale)
+
+(env-keys ["ops"])
+(expect-that "Has unpaid reservations"
+  (= 2)
+  (length (get-unpaid-reservations-for-sale "test-sale"))
+)
+(expect-that "Can payout reservations"
+  (= ["Write succeeded" "Write succeeded"])
+  (payout-reservations "test-sale" ["bob" "alice"])
+)
+(expect-that "Has tokens"
+  (= [3965.0 35.0 1000.0])
+  [
+    (free.swag-token.get-balance (get-token-bank-for-sale "test-sale"))
+    (free.swag-token.get-balance "bob")
+    (free.swag-token.get-balance "alice")
+  ]
+)
+
+(commit-tx)
+
+
+
+(begin-tx "Withdraw")
+(use free.swag-token-sale)
+
+(env-keys ["ops"])
+(expect-that "Can withdraw"
+  (= "Write succeeded")
+  (withdraw-from-token-bank "test-sale" "bob" 1000.0)
+)
+(expect-that "Tokens updated"
+  (= [2965.0 1035.0 1000.0])
+  [
+    (free.swag-token.get-balance (get-token-bank-for-sale "test-sale"))
+    (free.swag-token.get-balance "bob")
+    (free.swag-token.get-balance "alice")
+  ]
+)
+
+(commit-tx)
+
+
+
+(begin-tx "Getters")
+(use free.swag-token-sale)
+
+(get-sale "test-sale")
+(expect-that "Available supply works"
+  (= 3965.0)
+  (get-available-supply-for-sale "test-sale")
+)
+
+(commit-tx)
+
+
+(begin-tx "Ops guarded and private functions")
+(use free.swag-token-sale)
+
+(env-keys ["test"])
+(env-data {
+  "ks": { "keys": ["gov"], "pred": "keys-all" }
+})
+(expect-failure "Create sale"
+  "Tx Failed: Keyset failure (keys-all): 'free.swag-token-ops"  
+  (create-sale {} (read-keyset 'ks ) coin free.swag-token)
+)
+(expect-failure "update sale status"
+  "Tx Failed: Keyset failure (keys-all): 'free.swag-token-ops"  
+  (update-sale-status "" "")
+)
+(expect-failure "update sale tiers"
+  "Tx Failed: Keyset failure (keys-all): 'free.swag-token-ops"  
+  (update-sale-tiers "" [])
+)
+(expect-failure "add whitelist to sale"
+  "Tx Failed: Keyset failure (keys-all): 'free.swag-token-ops"  
+  (add-whitelist-to-sale "" [])
+)
+(expect-failure "add to whitelist"
+  "Tx Failed: require-capability: not granted"  
+  (add-to-whitelist "" "" "")
+)
+(expect-failure "update whitelist purchase amount"
+  "Tx Failed: require-capability: not granted"  
+  (update-whitelist-purchase-amount "" "" "" 1.0)
+)
+(expect-failure "reserve internal"
+  "Tx Failed: require-capability: not granted"  
+  (reserve-internal "" "" (read-keyset "ks") 1.0 1.0 0.0)
+)
+(expect-failure "payout reservations"
+  "Tx Failed: Keyset failure (keys-all): 'free.swag-token-ops"  
+  (payout-reservations "" [""])
+)
+(expect-failure "payout reservation internal"
+  "Tx Failed: require-capability: not granted"  
+  (payout-reservation-internal "" free.swag-token "" "")
+)
+(expect-failure "withdraw"
+  "Tx Failed: Keyset failure (keys-all): 'free.swag-token-ops"  
+  (withdraw-from-token-bank "" "" 0.0)
+)
+
+(commit-tx)

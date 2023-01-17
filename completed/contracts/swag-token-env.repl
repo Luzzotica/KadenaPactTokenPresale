@@ -1,18 +1,20 @@
 (load "kda-env/init.repl")
 
 
-
 (begin-tx "Load swag token environment")
 
-(env-keys ["gov"])
-(env-data 
+(env-keys ["gov" "ops"])
+(env-data
   {
     "free.swag-token-gov": {
       "keys": ["gov"], "pred": "keys-all"
     },
+    "free.swag-token-ops": {
+      "keys": ["ops"], "pred": "keys-all"
+    },
     "init-data": { 
-      "initial-supply": 1000.0, 
-      "accounts":[ 
+      "initial-supply": 10000.0,
+      "accounts": [
         { 
           "account": "ROOT", 
           "guard": {
@@ -29,10 +31,81 @@
         }
       ]
     },
+    "bank-guard": {
+      "keys": [
+        "gov"
+      ],
+      "pred": "keys-all"
+    },
+    "sale": {
+      "name": "test-sale",
+      "token-name": "swag-token",
+      "total-supply": 5000.0,
+      "tiers": [
+        {
+          "tier-id": "discount",
+          "tier-type": "WL",
+          "start-time": {"time": "2000-01-01T00:00:00Z"},
+          "end-time": {"time": "2000-01-02T00:00:00Z"},
+          "token-per-fungible": 10.0,
+          "min-token": 10.0,
+          "max-token": 100.0
+        },
+        {
+          "tier-id": "public",
+          "tier-type": "PUBLIC",
+          "start-time": {"time": "2000-01-02T00:00:00Z"},
+          "end-time": {"time": "2000-01-03T00:00:00Z"},
+          "token-per-fungible": 100.0,
+          "min-token": 10.0,
+          "max-token": -1.0
+        },
+        {
+          "tier-id": "public-no-min",
+          "tier-type": "PUBLIC",
+          "start-time": {"time": "2000-01-03T00:00:00Z"},
+          "end-time": {"time": "2000-01-03T00:00:00Z"},
+          "token-per-fungible": 100.0,
+          "min-token": -1.0,
+          "max-token": -1.0
+        }
+      ]
+    },
+    "sale-name": "test-sale",
+    "tier-data": [
+      {
+        "tier-id": "free",
+        "accounts": ["bob"]
+      },
+      {
+        "tier-id": "discount",
+        "accounts": ["bob", "alice"]
+      }
+    ],
     "upgrade": false
   }  
 )
 
 (load "swag-token.pact")
+(load "swag-token-sale.pact")
+
+(commit-tx)
+
+
+
+(begin-tx "Fund the sale")
+(use free.swag-token-sale)
+
+(env-keys ["gov"])
+(env-sigs [
+  {
+    "key": "gov", 
+    "caps": [
+      (coin.GAS)
+      (free.swag-token.TRANSFER "ROOT" (get-token-bank-for-sale "test-sale") 5000.0)
+    ]
+  }
+])
+(free.swag-token.transfer "ROOT" (get-token-bank-for-sale "test-sale") 5000.0)
 
 (commit-tx)
