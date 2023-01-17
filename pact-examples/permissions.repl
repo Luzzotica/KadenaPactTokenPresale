@@ -1,0 +1,43 @@
+(load "kda-env/init.repl")
+
+(begin-tx)
+
+(env-data {
+  "free.gov": {
+    "keys": ["gov"],
+    "pred": "keys-all"
+  },
+  "free.ops": {
+    "keys": ["ops1" "ops2"],
+    "pred": "keys-any"
+  }
+})
+
+(load "permissions.pact")
+
+(commit-tx)
+
+
+
+(begin-tx "Test ops and private functions")
+(use free.permissions)
+
+(env-keys ["ops1"])
+(expect-that "Ops can be acquired"
+  (= "Ops granted!")
+  (with-ops)
+)
+
+(expect-that "Ops can be acquired"
+  (= "Withdrew 10.0 tokens")
+  (withdraw-ops 10.0)
+)
+
+(expect-that "Can purchase tokens"
+  (= "Withdrew 15.0 tokens")
+  (withdraw-ops 15.0)
+)
+
+
+
+(commit-tx)
