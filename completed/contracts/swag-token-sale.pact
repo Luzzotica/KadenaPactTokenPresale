@@ -1,21 +1,19 @@
-(namespace "free")
+(namespace "n_747f0d4342e6af9f3ce85b175da61bbc583582de")
 
-(define-keyset "free.swag-token-ops")
+(define-keyset "n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-ops")
 
 (module swag-token-sale GOV
-
-  (use coin)
 
   ;; -------------------------------
   ;; Governance and Permissions
 
   (defcap GOV ()
-    (enforce-keyset "free.swag-token-gov")
+    (enforce-keyset "n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-gov")
     (compose-capability (OPS_INTERNAL))
   )
 
   (defcap OPS ()
-    (enforce-keyset "free.swag-token-ops")
+    (enforce-keyset "n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-ops")
     (compose-capability (OPS_INTERNAL))
   )
 
@@ -47,7 +45,7 @@
   )
 
   (defschema sale ;; ID is name
-    @doc "Defines a sale with a name, start date, end date, \ 
+    @doc "Defines a sale with a name, \ 
     \ total supply, total-sold, status, fungible, and tiers. \
     \ The ID of the sale is the name."
     name:string
@@ -63,6 +61,24 @@
     tiers:[object:{tier}]
   )
   (deftable sales:{sale})
+
+  (defcap WITHDRAW ()
+    true
+  )
+
+  (defun require-WITHDRAW:bool (sale:string)
+    (require-capability (WITHDRAW))
+    true
+  )
+
+  (defun get-token-bank-guard-for-sale:guard (sale:string)
+    @doc "Creates a guard that is used for the token bank of the sale"
+    (create-user-guard (require-WITHDRAW sale))
+  )
+
+  (defun get-token-bank-for-sale:string (sale:string)
+    (create-principal (get-token-bank-guard-for-sale sale))
+  )
 
   (defschema in-create-sale
     @doc "A data structure for the sale data"
@@ -83,6 +99,7 @@
     
     (with-capability (OPS)
       (enforce (> (at "total-supply" in) 0.0) "Token total supply must be positive")
+      (validate-tiers (at "tiers" in))
 
       (token::create-account
         (get-token-bank-for-sale (at "name" in))
@@ -271,29 +288,11 @@
   (defun get-total-sold-for-sale:decimal (sale:string)
     @doc "Get token supply of specified sale"
 
-    (at "total-sold" (read sales sale))
-  )
-
-  (defun get-sale-data:object{sale} (sale:string)
-    (read sales sale)
+    (at "total-sold" (read sales sale ["total-sold"]))
   )
 
   (defun get-fungible-bank-for-sale:string (sale:string)
     (at "fungible-bank-account" (read sales sale ["fungible-bank-account"]))
-  )
-
-  (defun require-WITHDRAW:bool (sale:string)
-    (require-capability (WITHDRAW))
-    true
-  )
-
-  (defun get-token-bank-guard-for-sale:guard (sale:string)
-    @doc "Creates a guard that is used for the token bank of the sale"
-    (create-user-guard (require-WITHDRAW sale))
-  )
-
-  (defun get-token-bank-for-sale:string (sale:string)
-    (create-principal (get-token-bank-guard-for-sale sale))
   )
 
   ;; -------------------------------
@@ -305,7 +304,7 @@
 
   (defschema whitelisted
     @doc "Stores the account of the whitelisted user, the tier-id, \
-    \ and amount they have minted. The id is 'sale|tier-id|account'."
+    \ and amount they have purchaesed. The id is 'sale|tier-id|account'."
     account:string
     tier-id:string
     purchase-amount:decimal
@@ -630,10 +629,6 @@
   ;; -------------------------------
   ;; Payouts
 
-  (defcap WITHDRAW ()
-    true
-  )
-
   (defun payout-reservations:[string]
     (
       sale:string 
@@ -753,7 +748,7 @@
       (read-msg "sale") 
       (read-keyset "bank-guard")
       coin
-      free.swag-token
+      n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token
     )
     (add-whitelist-to-sale 
       (read-msg "sale-name")

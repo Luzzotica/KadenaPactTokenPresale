@@ -3,24 +3,34 @@
 (begin-tx "Governance")
 (use free.swag-token-sale)
 
-(env-keys ["test"])
-(expect-failure "Can't acquire gov with test"
+(env-keys [])
+(expect-failure "Can't acquire GOV cap without gov key"
   "Tx Failed: Keyset failure (keys-all): 'free.swag-token-gov"
   (test-capability (GOV))
 )
-(expect-failure "Can't acquire ops with test"
+(expect-failure "Can't acquire OPS cap without ops key"
+  "Tx Failed: Keyset failure (keys-all): 'free.swag-token-ops"
+  (test-capability (OPS))
+)
+
+(env-keys ["test"])
+(expect-failure "Can't acquire GOV cap without gov key"
+  "Tx Failed: Keyset failure (keys-all): 'free.swag-token-gov"
+  (test-capability (GOV))
+)
+(expect-failure "Can't acquire OPS cap without ops key"
   "Tx Failed: Keyset failure (keys-all): 'free.swag-token-ops"
   (test-capability (OPS))
 )
 
 (env-keys ["gov"])
-(expect-that "Can acquire gov with gov"
+(expect-that "Can acquire GOV cap with gov key"
   (= "Capability acquired")
   (test-capability (GOV))
 )
 
 (env-keys ["ops"])
-(expect-that "Can acquire ops with ops"
+(expect-that "Can acquire OPS cap with ops key"
   (= "Capability acquired")
   (test-capability (OPS))
 )
@@ -28,17 +38,8 @@
 (commit-tx)
 
 
-(begin-tx "Check the sale, update a sale, test getting tiers")
+(begin-tx "Check the sale, test getting tiers based on current time")
 (use free.swag-token-sale)
-
-(expect-that "Total supply is correct"
-  (= 5000.0)
-  (get-total-supply-for-sale "test-sale")
-)
-(expect-that "Total sold is correct"
-  (= 0.0)
-  (get-total-sold-for-sale "test-sale")
-)
 
 (let
   (
@@ -49,7 +50,7 @@
         (time "2000-01-02T00:00:00Z")
         (time "2000-01-02T23:59:59Z")
         (time "2000-01-03T00:00:00Z")
-      ]
+      ]  
     )
     (expected-tier-ids
       [
@@ -60,34 +61,28 @@
         "public-no-min"
       ]
     )
-    (combine
-      (lambda (time tier)
-        { "time": time, "expected-tier-id": tier }
-      )  
-    )
     (check-tier
-      (lambda (check-data:object)
-        (let
-          (
-            (t (at "time" check-data))
-            (expected-tier-id (at "expected-tier-id" check-data))
-          )
-          ;; Set the block time
-          (env-chain-data { "block-time": t })
+      (lambda (t:time expected-tier-id:string)
+        (env-chain-data {"block-time": t})
 
-          (with-applied-env
-            ;; Get the tier and validate it
-            (expect-that "Tier id is correct"
-              (= expected-tier-id)
-              (at "tier-id" (get-current-tier-for-sale "test-sale"))
-            )
+        (with-applied-env
+          (expect-that "Tier id is correct"
+            (= expected-tier-id)
+            (at "tier-id" (get-current-tier-for-sale "test-sale"))
           )
         )
       )  
     )
   )  
-  (map (check-tier) (zip (combine) times expected-tier-ids))
+  (zip (check-tier) times expected-tier-ids)
 )
+
+(commit-tx)
+
+
+
+(begin-tx "update a sale, test getting tiers")
+(use free.swag-token-sale)
 
 ;; Test update the tiers
 (expect-that "Update tiers"
@@ -345,11 +340,36 @@
         )
       )  
     )
-  )  
+  )
   (map (check-tier) (zip (combine) tiers expected-failures))
 )
 
 (commit-tx)
+
+ 
+
+(begin-tx "Sale Getters")
+(use free.swag-token-sale)
+
+(expect-that "get sale works"
+  (= "test-sale")
+  (at "name" (get-sale "test-sale"))
+)
+(expect-that "Total supply is correct"
+  (= 5000.0)
+  (get-total-supply-for-sale "test-sale")
+)
+(expect-that "Total sold is correct"
+  (= 0.0)
+  (get-total-sold-for-sale "test-sale")
+)
+(expect-that "Available supply works"
+  (= 5000.0)
+  (get-available-supply-for-sale "test-sale")
+)
+
+(commit-tx)
+
 
 
 (begin-tx "Whitelist: add, is whitelisted, update count")
@@ -504,6 +524,10 @@
   (= 25.0)
   (get-total-sold-for-sale "test-sale")
 )
+(expect-that "Available supply works"
+  (= 4975.0)
+  (get-available-supply-for-sale "test-sale")
+)
 
 
 (commit-tx)
@@ -549,8 +573,12 @@
   (reserve "test-sale" "alice" 0.01)
 )
 (expect-failure "Can't purchase more than total supply"
-"Purchase amount exceeds total supply"
+  "Purchase amount exceeds total supply"
   (reserve "test-sale" "alice" 1000.0)
+)
+(expect-failure "Can't purchase more than total supply includes total sold"
+  "Purchase amount exceeds total supply"
+  (reserve "test-sale" "alice" 49.9)
 )
 (expect-that "Reserving succeeds"
   (= true)
@@ -570,6 +598,10 @@
 (expect-that "Total sold updated"
   (= 1035.0)
   (get-total-sold-for-sale "test-sale")
+)
+(expect-that "Available supply works"
+  (= 3965.0)
+  (get-available-supply-for-sale "test-sale")
 )
 
 (commit-tx)
@@ -620,18 +652,6 @@
 
 (commit-tx)
 
-
-
-(begin-tx "Getters")
-(use free.swag-token-sale)
-
-(get-sale "test-sale")
-(expect-that "Available supply works"
-  (= 3965.0)
-  (get-available-supply-for-sale "test-sale")
-)
-
-(commit-tx)
 
 
 (begin-tx "Ops guarded and private functions")

@@ -1,0 +1,59 @@
+{
+  "free.swag-token-gov": {
+    "keys": ["aeecd476ad8a4842ec84f3fbdad39b73fe7329fb4feaa3ea4367314a29a7e42b"], "pred": "keys-all"
+  },
+  "free.swag-token-ops": {
+    "keys": ["aeecd476ad8a4842ec84f3fbdad39b73fe7329fb4feaa3ea4367314a29a7e42b"], "pred": "keys-all"
+  },
+  "init-data": { 
+    "initial-supply": 100000.0,
+    "accounts": [
+      { 
+        "account": "ROOT", 
+        "guard": {
+          "keys": ["aeecd476ad8a4842ec84f3fbdad39b73fe7329fb4feaa3ea4367314a29a7e42b"], "pred": "keys-all"
+        },
+        "percent": 0.1
+      },
+      { 
+        "account": "SALE", 
+        "guard": {
+          "keys": ["aeecd476ad8a4842ec84f3fbdad39b73fe7329fb4feaa3ea4367314a29a7e42b"], "pred": "keys-all"
+        },
+        "percent": 0.5
+      },
+      { 
+        "account": "LIQUIDITY", 
+        "guard": {
+          "keys": ["aeecd476ad8a4842ec84f3fbdad39b73fe7329fb4feaa3ea4367314a29a7e42b"], "pred": "keys-all"
+        },
+        "percent": 0.4
+      }
+    ]
+  },
+  "bank-guard": {
+    "keys": [
+      "591649bce0c4a59edb6608ec09046457a35ba2983f999b89945b3ba3b596c0c7"
+    ],
+    "pred": "keys-all"
+  },
+  "sale": {
+    "name": "swag-sale",
+    "token-name": "swag-token",
+    "total-supply": 50000.0,
+    "tiers": [
+      {
+        "tier-id": "Public",
+        "tier-type": "PUBLIC",
+        "start-time": {"time": "2000-01-03T00:00:00Z"},
+        "end-time": {"time": "2000-01-03T00:00:00Z"},
+        "token-per-fungible": 10.0,
+        "min-token": 1.0,
+        "max-token": -1.0
+      }
+    ]
+  },
+  "sale-name": "swag-sale",
+  "tier-data": [],
+  "upgrade": false
+}  
