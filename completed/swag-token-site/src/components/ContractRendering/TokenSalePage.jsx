@@ -106,7 +106,7 @@ function TokenSalePage() {
           src='/lightsaber.png'
           className='sticky spin -z-10 w-96 px-32'
         />
-        <ReservationRender className='z-50 -mt-60 pb-40'/>
+        <ReservationRender className='-mt-60 pb-40'/>
       </div>
     </div>
   )
