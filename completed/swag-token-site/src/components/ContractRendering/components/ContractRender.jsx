@@ -11,21 +11,17 @@ function ContractRender() {
 
   const saleData = useSelector(state => state.saleInfo.saleData);
   const [saleStatus, setSaleStatus] = useState('');
-  const totalSupply = useSelector(state => state.saleInfo.totalSold);
+  const totalSupply = useSelector(state => state.saleInfo.totalSupply);
   const totalSold = useSelector(state => state.saleInfo.totalSold);
   useEffect(() => {
     if (Object.keys(saleData).length === 0) {
       return;
     }
 
-    // console.log(collectionData);
-    let totalSupply = saleData['total-supply'];
-    setTotalSupply(totalSupply);
-
     if (totalSupply === totalSold) {
       setSaleStatus('complete');
     }
-  }, [saleData]);
+  }, [totalSupply, totalSold]);
 
   const currentTier = useSelector(state => state.saleInfo.currentTier);
   const [timerStatus, setTimerStatus] = useState('before');
@@ -48,7 +44,7 @@ function ContractRender() {
       setPriceText('Free');
     }
     else {
-      setPriceText(`${currentTier['token-per-fungible']} per $KDA`);
+      setPriceText(`${currentTier['token-per-fungible']} $SWAG per $KDA`);
     }
     
     setTimerStatus(currentTier['status'])
@@ -118,11 +114,11 @@ function ContractRender() {
       
       <FlexRow className="w-full gap-10 text-center">
         <FlexColumn className="flex-auto w-64 gap-4">
-          <h1 className='text-white text-7xl font-extrabold'>{priceText}</h1>
+          <h1 className='text-white text-5xl font-extrabold'>{priceText}</h1>
           <p className='text-xl'>Current Conversion Rate</p>
         </FlexColumn>
         <FlexColumn className="flex-auto w-64 gap-4">
-          <h1 className='text-white text-7xl font-extrabold'>{totalSold} / {totalSupply}</h1>
+          <h1 className='text-white text-5xl font-extrabold'>{totalSold} / {totalSupply}</h1>
           <p className='text-xl'>Tokens Sold</p>
         </FlexColumn>
       </FlexRow>

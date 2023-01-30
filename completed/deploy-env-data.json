@@ -1,20 +1,13 @@
 {
-  "n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-gov": {
+  "free.swag-token-gov": {
     "keys": ["aeecd476ad8a4842ec84f3fbdad39b73fe7329fb4feaa3ea4367314a29a7e42b"], "pred": "keys-all"
   },
-  "n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-ops": {
+  "free.swag-token-ops": {
     "keys": ["aeecd476ad8a4842ec84f3fbdad39b73fe7329fb4feaa3ea4367314a29a7e42b"], "pred": "keys-all"
   },
   "init-data": { 
     "initial-supply": 100000.0,
     "accounts": [
-      { 
-        "account": "ROOT", 
-        "guard": {
-          "keys": ["aeecd476ad8a4842ec84f3fbdad39b73fe7329fb4feaa3ea4367314a29a7e42b"], "pred": "keys-all"
-        },
-        "percent": 0.1
-      },
       { 
         "account": "SALE", 
         "guard": {
@@ -23,11 +16,11 @@
         "percent": 0.5
       },
       { 
-        "account": "LIQUIDITY", 
+        "account": "ROOT", 
         "guard": {
           "keys": ["aeecd476ad8a4842ec84f3fbdad39b73fe7329fb4feaa3ea4367314a29a7e42b"], "pred": "keys-all"
         },
-        "percent": 0.4
+        "percent": 0.5
       }
     ]
   },

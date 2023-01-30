@@ -14,103 +14,118 @@ function ReserveRender() {
   const whitelistInfo = useSelector(state => state.saleInfo.whitelistInfo);
   const currentTier = useSelector(state => state.saleInfo.currentTier);
   const [price, setPrice] = useState(-1);
-  const [mintCount, setMintCount] = useState(-1);
-  const [mintLimit, setMintLimit] = useState(-1);
-  const [remainingMints, setRemainingMints] = useState(-1);
+  const [purchaseAmount, setPurchaseAmount] = useState(-1);
+  const [tokenMin, setTokenMin] = useState(-1);
+  const [tokenMax, setTokenMax] = useState(-1);
+  const [remainingPurchase, setRemainingPurchase] = useState(-1);
   useEffect(() => {
-    // console.log(collectionData);
     if (Object.keys(currentTier).length === 0) {
-      // console.log('no collection data'); 
-      return; 
+      return;
     }
 
-    // If the tier type is WL, then we need to get our mint count (if any)
+    // If the tier type is WL
     if ('tier-type' in currentTier 
       && currentTier['tier-type'] === 'WL') {
       // console.log('current tier: ', currentTier);
       // console.log('whitelist info: ', whitelistInfo);
 
       // Whitelisted if the tier is our whitelist 
-      // and the whitelist mint count is not -1
+      // and the whitelist purchase amount is not -1
       if (currentTier['tier-id'] in whitelistInfo
-        && whitelistInfo[currentTier['tier-id']]['int'] >= 0) {
-        setMintCount(whitelistInfo[currentTier['tier-id']]['int']);
-        setMintLimit(currentTier['limit']);
-        setPrice(currentTier.cost);
+        && whitelistInfo[currentTier['tier-id']] >= 0) {
+        setPurchaseAmount(whitelistInfo[currentTier['tier-id']]['int']);
+        setTokenMin(currentTier['min-token']);
+        setTokenMax(currentTier['max-token']);
+        setPrice(currentTier['token-per-fungible']);
       }
       else { // If we aren't whitelisted, set the price to -1
-        setMintCount(-1);
-        setMintLimit(-1);
+        setPurchaseAmount(-1);
+        setTokenMin(-1);
+        setTokenMax(-1);
         setPrice(-1);
       }
     }
     else {
-      setMintCount(-1);
-      setMintLimit(-1);
-      setPrice(currentTier.cost);
+      setPurchaseAmount(-1);
+      setTokenMin(-1);
+      setTokenMax(-1);
+      setPrice(currentTier['token-per-fungible']);
     }
     
   }, [currentTier, whitelistInfo]);
 
   useEffect(() => {
-    if (mintCount === -1 || mintLimit === -1) {
-      setRemainingMints(-1);
+    if (purchaseAmount === -1 || tokenMin === -1) {
+      setRemainingPurchase(-1);
     }
-    setRemainingMints(mintLimit - mintCount);
-  }, [mintCount, mintLimit]);
+    setRemainingPurchase(tokenMin - purchaseAmount);
+  }, [purchaseAmount, tokenMin]);
 
   const [amount, setAmount] = useState(1);
-  const step = (value) => {
-    if (amount + value < 1 || amount + value > 10) {
-      return;
-    } 
-    if (mintLimit !== -1 && amount + value > remainingMints) {
-      return;
+  const [canMint, setCanMint] = useState(false);
+  const [cantMintReason, setCantMintReason] = useState('');
+  useEffect(() => {
+    // If the amount is outside of the bounds set, stop it
+    if (tokenMin !== -1 && amount < tokenMin * price) {
+      setCanMint(false);
+      setCantMintReason(`Amount is less than the minimum amount of ${tokenMin} tokens`);
     }
+    else if (tokenMax !== -1 && amount > tokenMax * price) {
+      setCanMint(false);
+      setCantMintReason(`Amount is greater than the maximum amount of ${tokenMax} tokens`);
+    }
+    else {
+      setCanMint(true);
+      setCantMintReason('');
+    }
+  }, [amount, tokenMin, tokenMax, price]);
 
-    setAmount(amount + value);
+  const onInputChanged = (e) => {
+    let id = e.target.id;
+    if (id === 'amount') {
+      let amount = Number(e.target.value);
+      setAmount(amount);
+    }
   }
 
-  const mint = () => {
+  const reserve = () => {
     dispatch(reserveTokens(chainId, account, amount));
   }
 
   return (
     <div className="flex flex-row gap-2 justify-center place-items-center">
       <FlexColumn className="w-96 gap-4 justify-center place-items-center">
-        {price >= 0 && mintCount !== -1 ? 
+        {price >= 0 && purchaseAmount !== -1 ? 
           <FlexColumn className="flex-auto gap-4 text-center content-center">
             <p className='text-xl'>
-              {remainingMints === 0 ? 
-                'No more mints for this tier!'
-              : 
-                `You can mint from this tier ${remainingMints}${remainingMints === 1.0 ? ' time' : ' times'}`
+              {remainingPurchase === 0 ? 
+                "Can't reserve more from this tier!"
+              :
+                `You can purchase tokens from this tier. ${remainingPurchase}${remainingPurchase === 1.0 ? ' time' : ' times'}`
               }
             </p>
           </FlexColumn>
         :
           <></>
         }
-        {price >= 0 || (currentTier['tier-type'] === 'WL' && remainingMints > 0) ? 
+        {price >= 0 || (currentTier['tier-type'] === 'WL' && remainingPurchase > 0) ? 
           <FlexColumn className="flex-auto w-64 gap-4 place-items-stretch">
             <FlexRow className="flex-1 gap-2 place-items-stretch">
-              <CustomButton
-                className='flex-auto'
-                text={`-`}
-                onClick={() => step(-1)}/>
-              <h1 
-                className='text-white text-2xl font-extrabold flex-auto text-center text-al'>
-                  {amount}
-              </h1>
-              <CustomButton
-                className='flex-auto'
-                text={`+`}
-                onClick={() => step(1)}/>
+              <input 
+                id="amount"
+                type="number"
+                value={amount}
+                onChange={onInputChanged}
+                className='flex-auto bg-slate-800 rounded-md p-1'>
+              </input>
             </FlexRow>
-            <CustomButton
+            {canMint ? <CustomButton
               className='flex-auto'
               text={`Mint`}
-              onClick={mint}/> 
+              onClick={reserve}/> 
+              : 
+              <span className='text-3xl'>{cantMintReason}</span>
+            }
           </FlexColumn>
         : 
           <></>

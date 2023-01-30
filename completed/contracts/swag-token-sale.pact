@@ -608,14 +608,35 @@
     (select reservations (where 'sale (= sale)))
   )
 
+  (defun empty-guard () true)
   (defun get-reservation-for-account:object{reservation} 
     (
       sale:string 
       account:string
     )
     @doc "Get all account reservations for specified sale"
-
-    (read reservations (get-reservation-id sale account))
+    
+    (with-default-read reservations (get-reservation-id sale account)
+      { "sale": sale
+      , "account": account
+      , "guard": ""
+      , "amount-token": 0.0
+      , "amount-token-paid": 0.0
+      , "is-paid": false
+      }
+      { "guard":= guard
+      , "amount-token":= amount-token
+      , "amount-token-paid":= amount-token-paid
+      , "is-paid":= is-paid
+      }
+      { "sale": sale
+      , "account": account
+      , "guard": guard
+      , "amount-token": amount-token
+      , "amount-token-paid": amount-token-paid
+      , "is-paid": is-paid
+      }
+    )
   )
 
   (defun get-unpaid-reservations-for-sale (sale:string)

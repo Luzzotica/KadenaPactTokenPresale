@@ -389,6 +389,11 @@
   (get-available-supply-for-sale "test-sale")
 )
 
+(expect-that "Can get reservation for account"
+  (= {"sale": "test-sale","account": "bob","guard": "","amount-token": 0.0,"amount-token-paid": 0.0,"is-paid": false})
+  (get-reservation-for-account "test-sale" "bob")
+)
+
 (commit-tx)
 
 
@@ -569,7 +574,51 @@
   (= 4975.0)
   (get-available-supply-for-sale "test-sale")
 )
+(expect-that "Can get reservation for account"
+  (= [25.0 false])
+  [
+    (at "amount-token" (get-reservation-for-account "test-sale" "bob"))
+    (at "is-paid" (get-reservation-for-account "test-sale" "bob"))
+  ]
+)
 
+
+
+(commit-tx)
+
+
+
+(begin-tx "Payouts")
+(use free.swag-token-sale)
+
+(env-keys ["ops"])
+(expect-that "Has unpaid reservations"
+  (= 1)
+  (length (get-unpaid-reservations-for-sale "test-sale"))
+)
+(expect-that "Can payout reservations"
+  (= ["Write succeeded"])
+  (payout-reservations "test-sale" ["bob"])
+)
+(expect-that "Reservation was marked as paid"
+  (= [25.0 25.0 true])
+  [
+    (at "amount-token" (get-reservation-for-account "test-sale" "bob"))
+    (at "amount-token-paid" (get-reservation-for-account "test-sale" "bob"))
+    (at "is-paid" (get-reservation-for-account "test-sale" "bob"))
+  ]
+)
+(expect-that "Has unpaid reservations"
+  (= 0)
+  (length (get-unpaid-reservations-for-sale "test-sale"))
+)
+(expect-that "Has tokens"
+  (= [4975.0 25.0])
+  [
+    (free.swag-token.get-balance (get-token-bank-for-sale "test-sale"))
+    (free.swag-token.get-balance "bob")
+  ]
+)
 
 (commit-tx)
 
@@ -644,6 +693,13 @@
   (= 3965.0)
   (get-available-supply-for-sale "test-sale")
 )
+(expect-that "Can get reservation for account"
+  (= [35.0 false])
+  [
+    (at "amount-token" (get-reservation-for-account "test-sale" "bob"))
+    (at "is-paid" (get-reservation-for-account "test-sale" "bob"))
+  ]
+)
 
 (commit-tx)
 
@@ -653,6 +709,14 @@
 (use free.swag-token-sale)
 
 (env-keys ["ops"])
+(expect-that "Reservation is unpaid for bob now"
+  (= [35.0 25.0 false])
+  [
+    (at "amount-token" (get-reservation-for-account "test-sale" "bob"))
+    (at "amount-token-paid" (get-reservation-for-account "test-sale" "bob"))
+    (at "is-paid" (get-reservation-for-account "test-sale" "bob"))
+  ]
+)
 (expect-that "Has unpaid reservations"
   (= 2)
   (length (get-unpaid-reservations-for-sale "test-sale"))
@@ -660,6 +724,18 @@
 (expect-that "Can payout reservations"
   (= ["Write succeeded" "Write succeeded"])
   (payout-reservations "test-sale" ["bob" "alice"])
+)
+(expect-that "Reservation was marked as paid"
+  (= [35.0 35.0 true])
+  [
+    (at "amount-token" (get-reservation-for-account "test-sale" "bob"))
+    (at "amount-token-paid" (get-reservation-for-account "test-sale" "bob"))
+    (at "is-paid" (get-reservation-for-account "test-sale" "bob"))
+  ]
+)
+(expect-that "Has unpaid reservations"
+  (= 0)
+  (length (get-unpaid-reservations-for-sale "test-sale"))
 )
 (expect-that "Has tokens"
   (= [3965.0 35.0 1000.0])
