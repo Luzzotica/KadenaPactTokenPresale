@@ -95,7 +95,7 @@ export const initAccountData = (chainId, account) => {
     // Get the whitelist mint count for each tier that is a WL
     let tiers = getState().saleInfo.saleData.tiers;
     var wlTierCount = 0;
-    console.log(tiers);
+    // console.log(tiers);
     for (var i = 0; i < tiers.length; i++) {
 
       if (tiers[i]['tier-type'] === 'WL') {
@@ -109,10 +109,10 @@ export const initAccountData = (chainId, account) => {
       }
     }
     pactCode += '}]'
-    console.log(pactCode);
+    // console.log(pactCode);
 
     var result = await dispatch(local(chainId, pactCode, {}, [], 150000, 1e-8, true));
-    console.log(result);
+    // console.log(result);
 
     if (result.result.status = 'success') {
       // console.log(result.result.data);
@@ -144,21 +144,26 @@ export const reserveTokens = (chainId, account, amount) => {
       createCap("Transfer", "Allows sending KDA to the specified address", "coin.TRANSFER", [account, bank, amount])
     ]
     // var result = await dispatch(local(chainId, pactCode, {}, caps, 2000 * amount, 1e-8, false, true));
-
     var result = await dispatch(localAndSend(chainId, 
       pactCode, 
       {}, 
       caps, 
       2000, 
       1e-8));
-    console.log('Normal', result);
+    // console.log('Normal', result);
     
     if (result.result.status === 'success') {
-      let saleData = getState().saleInfo.saleData;
-      let tokenPerFungible = saleData['token-per-fungible'];
+      let currentTier = getState().saleInfo.currentTier;
+      let tokenPerFungible = currentTier['token-per-fungible'];
+      // console.log('New total sold built from:', totalSold, amount, tokenPerFungible);
       dispatch(saleSlice.actions.setTotalSold(totalSold + amount * tokenPerFungible));
 
-      let currentTier = getState().saleInfo.currentTier;
+      // Update the reservation to the new amount purchased
+      let reservation = getState().saleInfo.reservation;
+      let copiedReservation = JSON.parse(JSON.stringify(reservation));
+      copiedReservation['amount-token'] += amount * tokenPerFungible;
+      dispatch(saleSlice.actions.setReservation(copiedReservation));
+
       let whitelistInfo = getState().saleInfo.whitelistInfo;
       // If the whitelist info contains the current tier's tier id, 
       // increment the count

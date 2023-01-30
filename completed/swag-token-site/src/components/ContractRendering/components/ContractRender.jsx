@@ -6,6 +6,8 @@ import { setCurrentTier } from '../store/saleSlice';
 import { formatCountdown, getCurrentTier } from '../store/saleSliceHelpers';
 
 function ContractRender() {
+  const fungibleName = import.meta.env.VITE_FUNGIBLE_NAME;
+  const tokenName = import.meta.env.VITE_TOKEN_NAME;
 
   const dispatch = useDispatch();
 
@@ -44,7 +46,7 @@ function ContractRender() {
       setPriceText('Free');
     }
     else {
-      setPriceText(`${currentTier['token-per-fungible']} $SWAG per $KDA`);
+      setPriceText(`${currentTier['token-per-fungible']} ${tokenName} per ${fungibleName}`);
     }
     
     setTimerStatus(currentTier['status'])
@@ -119,7 +121,7 @@ function ContractRender() {
         </FlexColumn>
         <FlexColumn className="flex-auto w-64 gap-4">
           <h1 className='text-white text-5xl font-extrabold'>{totalSold} / {totalSupply}</h1>
-          <p className='text-xl'>Tokens Sold</p>
+          <p className='text-xl'>{`${tokenName} Sold`}</p>
         </FlexColumn>
       </FlexRow>
     </FlexColumn>

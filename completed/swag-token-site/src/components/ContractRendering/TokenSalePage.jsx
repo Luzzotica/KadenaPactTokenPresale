@@ -10,6 +10,7 @@ import { disconnectProvider } from '../KDAWallet/store/kadenaSlice';
 import reduceToken from '../KDAWallet/utils/reduceToken';
 import CustomButton from '../Layout/CustomButton';
 import FlexColumn from '../Layout/FlexColumn';
+import FlexRow from '../Layout/FlexRow';
 import { messageToastManager, txToastManager, walletConnectedToastManager } from '../TxToast/TxToastManager';
 import ContractRender from './components/ContractRender';
 import ReserveRender from './components/ReserveRender';
@@ -17,7 +18,6 @@ import ReservationRender from './components/ReservationRender';
 import { initAccountData, initContractData } from './store/saleSlice';
 
 import './index.css'
-import FlexRow from '../Layout/FlexRow';
 
 function TokenSalePage() {
   const chainId = import.meta.env.VITE_CHAIN_ID
@@ -97,16 +97,16 @@ function TokenSalePage() {
           </FlexColumn>
         </FlexColumn>
       </div>
-      <div className='h-auto'>
+      <div className='h-auto w-full'>
         <img 
           src='/spaceman.png'
-          className='spin w-64 py-10 px-10'
+          className='sticky spin -z-10 w-64 py-10 px-10'
         />
         <img 
           src='/lightsaber.png'
-          className='spin w-96 px-32'
+          className='sticky spin -z-10 w-96 px-32'
         />
-        <ReservationRender className='-mt-40 pb-40'/>
+        <ReservationRender className='z-50 -mt-60 pb-40'/>
       </div>
     </div>
   )

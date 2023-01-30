@@ -7,13 +7,14 @@ import { reserveTokens } from '../store/saleSlice';
 
 function ReserveRender() {
   const chainId = import.meta.env.VITE_CHAIN_ID;
+  const tokenName = import.meta.env.VITE_TOKEN_NAME;
 
   const dispatch = useDispatch();
 
   const account = useSelector(state => state.kadenaInfo.account);
   const whitelistInfo = useSelector(state => state.saleInfo.whitelistInfo);
   const currentTier = useSelector(state => state.saleInfo.currentTier);
-  const [price, setPrice] = useState(-1);
+  const [tokenPerFungible, setTokenPerFungible] = useState(-1);
   const [purchaseAmount, setPurchaseAmount] = useState(-1);
   const [tokenMin, setTokenMin] = useState(-1);
   const [tokenMax, setTokenMax] = useState(-1);
@@ -22,6 +23,7 @@ function ReserveRender() {
     if (Object.keys(currentTier).length === 0) {
       return;
     }
+    // console.log(currentTier);
 
     // If the tier type is WL
     if ('tier-type' in currentTier 
@@ -33,23 +35,23 @@ function ReserveRender() {
       // and the whitelist purchase amount is not -1
       if (currentTier['tier-id'] in whitelistInfo
         && whitelistInfo[currentTier['tier-id']] >= 0) {
-        setPurchaseAmount(whitelistInfo[currentTier['tier-id']]['int']);
+        setPurchaseAmount(whitelistInfo[currentTier['tier-id']]);
         setTokenMin(currentTier['min-token']);
         setTokenMax(currentTier['max-token']);
-        setPrice(currentTier['token-per-fungible']);
+        setTokenPerFungible(currentTier['token-per-fungible']);
       }
       else { // If we aren't whitelisted, set the price to -1
         setPurchaseAmount(-1);
         setTokenMin(-1);
         setTokenMax(-1);
-        setPrice(-1);
+        setTokenPerFungible(-1);
       }
     }
     else {
       setPurchaseAmount(-1);
-      setTokenMin(-1);
-      setTokenMax(-1);
-      setPrice(currentTier['token-per-fungible']);
+      setTokenMin(currentTier['min-token']);
+      setTokenMax(currentTier['max-token']);
+      setTokenPerFungible(currentTier['token-per-fungible']);
     }
     
   }, [currentTier, whitelistInfo]);
@@ -61,24 +63,49 @@ function ReserveRender() {
     setRemainingPurchase(tokenMin - purchaseAmount);
   }, [purchaseAmount, tokenMin]);
 
-  const [amount, setAmount] = useState(1);
-  const [canMint, setCanMint] = useState(false);
-  const [cantMintReason, setCantMintReason] = useState('');
+  const [purchaseInfo, setPurchaseInfo] = useState('');
+  useEffect(() => {
+    // If the min and max are -1, don't show anything
+    if (tokenMin === -1 && tokenMax === -1) {
+      setPurchaseInfo('');
+    }
+    // If both min and max exist, say what they are
+    else if (tokenMin !== -1 && tokenMax !== -1) {
+      setPurchaseInfo(`Must purchase between ${tokenMin} and ${tokenMax} ${tokenName}`);
+    }
+    // If the min exists, say what it is
+    else if (tokenMin !== -1) {
+      setPurchaseInfo(`Must purchase at least ${tokenMin} ${tokenName}`);
+    }
+    // If the max exists, say what it is
+    else if (tokenMax !== -1) {
+      setPurchaseInfo(`Must purchase less than ${tokenMax} ${tokenName}`);
+    }
+  }, [tokenMin, tokenMax]);
+
+  const [amount, setAmount] = useState(0.1);
+  const [amountToken, setAmountToken] = useState(0.1);
+  useEffect(() => {
+    setAmountToken(amount * tokenPerFungible);
+  }, [amount, tokenPerFungible]);
+
+  const [canReserve, setCanReserve] = useState(false);
+  const [cantReserveReason, setCantReserveReason] = useState('');
   useEffect(() => {
     // If the amount is outside of the bounds set, stop it
-    if (tokenMin !== -1 && amount < tokenMin * price) {
-      setCanMint(false);
-      setCantMintReason(`Amount is less than the minimum amount of ${tokenMin} tokens`);
+    if (tokenMin !== -1 && tokenMin > amountToken) {
+      setCanReserve(false);
+      setCantReserveReason(`Must purchase at least ${tokenMin} ${tokenName}`);
     }
-    else if (tokenMax !== -1 && amount > tokenMax * price) {
-      setCanMint(false);
-      setCantMintReason(`Amount is greater than the maximum amount of ${tokenMax} tokens`);
+    else if (tokenMax !== -1 && tokenMax < amountToken) {
+      setCanReserve(false);
+      setCantReserveReason(`Must purchase less than ${tokenMax} ${tokenName}`);
     }
     else {
-      setCanMint(true);
-      setCantMintReason('');
+      setCanReserve(true);
+      setCantReserveReason('');
     }
-  }, [amount, tokenMin, tokenMax, price]);
+  }, [amount, tokenMin, tokenMax, amountToken]);
 
   const onInputChanged = (e) => {
     let id = e.target.id;
@@ -95,7 +122,7 @@ function ReserveRender() {
   return (
     <div className="flex flex-row gap-2 justify-center place-items-center">
       <FlexColumn className="w-96 gap-4 justify-center place-items-center">
-        {price >= 0 && purchaseAmount !== -1 ? 
+        {tokenPerFungible >= 0 && purchaseAmount !== -1 ? 
           <FlexColumn className="flex-auto gap-4 text-center content-center">
             <p className='text-xl'>
               {remainingPurchase === 0 ? 
@@ -108,31 +135,32 @@ function ReserveRender() {
         :
           <></>
         }
-        {price >= 0 || (currentTier['tier-type'] === 'WL' && remainingPurchase > 0) ? 
-          <FlexColumn className="flex-auto w-64 gap-4 place-items-stretch">
+        {tokenPerFungible >= 0 || (currentTier['tier-type'] === 'WL' && remainingPurchase > 0) ? 
+          <FlexColumn className="flex-auto w-80 gap-4 place-items-stretch">
+            {purchaseInfo !== '' ? 
+              <p className='text-xl text-center'>{purchaseInfo}</p>
+              :
+              <></>
+            }
             <FlexRow className="flex-1 gap-2 place-items-stretch">
               <input 
                 id="amount"
                 type="number"
                 value={amount}
                 onChange={onInputChanged}
-                className='flex-auto bg-slate-800 rounded-md p-1'>
+                className='flex-auto bg-slate-800 rounded-md p-1 text-center'>
               </input>
             </FlexRow>
-            {canMint ? <CustomButton
+            <CustomButton
+              disabled={!canReserve}
               className='flex-auto'
-              text={`Mint`}
-              onClick={reserve}/> 
-              : 
-              <span className='text-3xl'>{cantMintReason}</span>
-            }
+              text={canReserve ? `Purchase ${amountToken} ${tokenName}` : cantReserveReason}
+              onClick={reserve}/>
           </FlexColumn>
         : 
           <></>
         }
-        
       </FlexColumn>
-      
     </div>
   )
 }
