@@ -29,11 +29,11 @@
 (use free.swag-token)
 
 (expect-that "ROOT has tokens"
-  (= 800.0)
+  (= 8000.0)
   (get-balance "ROOT")
 )
 (expect-that "LIQUIDITY has tokens"
-  (= 200.0)
+  (= 2000.0)
   (get-balance "LIQUIDITY")
 )
 

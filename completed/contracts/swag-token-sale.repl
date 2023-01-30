@@ -1,5 +1,26 @@
 (load "swag-token-env.repl")
 
+
+
+(begin-tx "Fund the sale")
+(use free.swag-token-sale)
+
+(env-keys ["gov"])
+(env-sigs [
+  {
+    "key": "gov", 
+    "caps": [
+      (coin.GAS)
+      (free.swag-token.TRANSFER "ROOT" (get-token-bank-for-sale "test-sale") 5000.0)
+    ]
+  }
+])
+(free.swag-token.transfer "ROOT" (get-token-bank-for-sale "test-sale") 5000.0)
+
+(commit-tx)
+
+
+
 (begin-tx "Governance")
 (use free.swag-token-sale)
 
@@ -456,12 +477,32 @@
 )
 
 (expect-that "Can update count"
-  (= ["Write succeeded" "Write succeeded" "Write succeeded"])
+  (= ["Write succeeded" "Write succeeded" "Write succeeded" 0.0 0.0 0.0])
   [
     (update-whitelist-purchase-amount "test-sale" "free" "bob" 0.0)
     (update-whitelist-purchase-amount "test-sale" "discount" "bob" 0.0)
     (update-whitelist-purchase-amount "test-sale" "discount" "alice" 0.0)
+    (get-whitelist-purchase-amount "test-sale" "free" "bob")
+    (get-whitelist-purchase-amount "test-sale" "discount" "bob")
+    (get-whitelist-purchase-amount "test-sale" "discount" "alice")
   ]
+)
+
+(commit-tx)
+
+
+
+(begin-tx)
+(use free.swag-token-sale)
+
+(env-keys ["ops"])
+(expect-that "Can update with ops"
+  (= "Write succeeded")
+  (update-whitelist-purchase-amount-ops "test-sale" "free" "bob" 1.0)
+)
+(expect-that "Did update"
+  (= 1.0)
+  (get-whitelist-purchase-amount "test-sale" "free" "bob")
 )
 
 (commit-tx)
@@ -684,6 +725,10 @@
 (expect-failure "update whitelist purchase amount"
   "Tx Failed: require-capability: not granted"  
   (update-whitelist-purchase-amount "" "" "" 1.0)
+)
+(expect-failure "update whitelist purchase amount ops"
+  "Tx Failed: Keyset failure (keys-all): 'free.swag-token-ops"  
+  (update-whitelist-purchase-amount-ops "" "" "" 1.0)
 )
 (expect-failure "reserve internal"
   "Tx Failed: require-capability: not granted"  

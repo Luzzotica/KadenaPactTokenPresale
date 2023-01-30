@@ -1,7 +1,7 @@
-(namespace "n_747f0d4342e6af9f3ce85b175da61bbc583582de")
+(namespace "free")
 
 ;; 1. Define your own keyset for governance
-(define-keyset "n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-gov")
+(define-keyset "free.swag-token-gov")
 
 (module swag-token GOV
 
@@ -24,7 +24,7 @@
 
   (defcap GOV ()
     ;; 2. Enforce the keyset you defined above for governance
-    (enforce-keyset "n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-gov")
+    (enforce-keyset "free.swag-token-gov")
   )
 
   ; --------------------------------------------------------------------------

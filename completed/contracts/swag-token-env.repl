@@ -90,22 +90,3 @@
 (load "swag-token-sale.pact")
 
 (commit-tx)
-
-
-
-(begin-tx "Fund the sale")
-(use free.swag-token-sale)
-
-(env-keys ["gov"])
-(env-sigs [
-  {
-    "key": "gov", 
-    "caps": [
-      (coin.GAS)
-      (free.swag-token.TRANSFER "ROOT" (get-token-bank-for-sale "test-sale") 5000.0)
-    ]
-  }
-])
-(free.swag-token.transfer "ROOT" (get-token-bank-for-sale "test-sale") 5000.0)
-
-(commit-tx)

@@ -1,6 +1,6 @@
-(namespace "n_747f0d4342e6af9f3ce85b175da61bbc583582de")
+(namespace "free")
 
-(define-keyset "n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-ops")
+(define-keyset "free.swag-token-ops")
 
 (module swag-token-sale GOV
 
@@ -8,12 +8,12 @@
   ;; Governance and Permissions
 
   (defcap GOV ()
-    (enforce-keyset "n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-gov")
+    (enforce-keyset "free.swag-token-gov")
     (compose-capability (OPS_INTERNAL))
   )
 
   (defcap OPS ()
-    (enforce-keyset "n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-ops")
+    (enforce-keyset "free.swag-token-ops")
     (compose-capability (OPS_INTERNAL))
   )
 
@@ -395,6 +395,19 @@
     (concat [sale "|" tier-id "|" account])
   )
 
+  (defun update-whitelist-purchase-amount-ops:string 
+    (
+      sale:string
+      tier-id:string
+      account:string
+      purchase-amount:decimal
+    )
+    @doc "Requires OPS. Updates the whitelist purchase amount for the given account."
+    (with-capability (OPS)
+      (update-whitelist-purchase-amount sale tier-id account purchase-amount)
+    )
+  )
+
   (defun update-whitelist-purchase-amount 
     (
       sale:string 
@@ -748,7 +761,7 @@
       (read-msg "sale") 
       (read-keyset "bank-guard")
       coin
-      n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token
+      free.swag-token
     )
     (add-whitelist-to-sale 
       (read-msg "sale-name")

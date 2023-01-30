@@ -8,9 +8,9 @@ module.exports = {
     extend: {
       backgroundImage: {
         'hero': "url('/src/assets/hero.png')",
-        'background': "url('/src/assets/background.png')",
+        'spaceman': "url('/src/assets/background.png')",
       },
     },
   },
-  plugins: [],
+  plugins: []
 }

@@ -17,6 +17,7 @@ import ReservationRender from './components/ReservationRender';
 import { initAccountData, initContractData } from './store/saleSlice';
 
 import './index.css'
+import FlexRow from '../Layout/FlexRow';
 
 function TokenSalePage() {
   const chainId = import.meta.env.VITE_CHAIN_ID
@@ -79,7 +80,7 @@ function TokenSalePage() {
           <></>
         }
       </FlexColumn>
-      <div className='hero bg-zinc-800 bg-hero bg-cover bg-right bg-no-repeat text-white py-10'>
+      <div className='hero bg-zinc-800 bg-hero bg-cover bg-left bg-no-repeat text-white py-10'>
         <FlexColumn className='gap-10'>
           <FlexColumn className='gap-10 bg-opacity-50 bg-black rounded-3xl p-4 m-4'>
             <ContractRender/>
@@ -97,7 +98,14 @@ function TokenSalePage() {
         </FlexColumn>
       </div>
       <div className='h-auto'>
-        <div className='bg-minted bg-contain bg-no-repeat sticky top-0 h-64 mg:h-full -z-10'></div>
+        <img 
+          src='/spaceman.png'
+          className='spin w-64 py-10 px-10'
+        />
+        <img 
+          src='/lightsaber.png'
+          className='spin w-96 px-32'
+        />
         <ReservationRender className='-mt-40 pb-40'/>
       </div>
     </div>
