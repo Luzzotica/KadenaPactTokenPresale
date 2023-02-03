@@ -10,6 +10,8 @@ Both smart contracts are completely tested.
 
 Everything is generic and can be redeployed for you own token!  
 
+Checkout what the website looks like [here](https://pact-token-sale.luzzotica.xyz/).
+
 This repo was created, and is used by the Pact Token Sale course created by Sterling Long (Luzzotica).  
 If you'd like to learn how to build this all from scratch so you can kickstart your development career using Pact on Kadena, go [purchase the course](https://www.luzzotica.xyz/offers/ZJQYRFF6/checkout)!
 

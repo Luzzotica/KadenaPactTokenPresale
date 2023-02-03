@@ -1,0 +1,15 @@
+(load "kda-env/init.repl")
+
+(begin-tx)
+(load "events.pact")
+(commit-tx)
+
+(begin-tx "Test event")
+(use free.events)
+
+(emit "swag")
+
+(env-events true)
+(env-events false)
+
+(commit-tx)

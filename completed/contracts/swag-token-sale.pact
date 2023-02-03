@@ -18,6 +18,7 @@
   )
 
   (defcap OPS_INTERNAL ()
+    (compose-capability (WHITELIST_UPDATE))
     (compose-capability (RESERVE))
   )
 
@@ -298,15 +299,12 @@
   ;; -------------------------------
   ;; Whitelist Handling
 
-  (defcap WHITELIST_UPDATE () 
-    true
-  )
-
   (defschema whitelisted
     @doc "Stores the account of the whitelisted user, the tier-id, \
     \ and amount they have purchaesed. The id is 'sale|tier-id|account'."
-    account:string
+    sale:string
     tier-id:string
+    account:string
     purchase-amount:decimal
   )
   (deftable whitelist-table:{whitelisted})
@@ -323,21 +321,26 @@
       tier-data:[object{tier-whitelist-data}]
     )
     @doc "Requires OPS. Adds the accounts to the whitelist for the given tier."
-    (with-capability (OPS)
-      (let
-        (
-          (handle-tier-data 
-            (lambda (tier-data:object{tier-whitelist-data})
-              (bind tier-data
-                { "tier-id":= tier-id
-                , "accounts":= accounts
-                }
-                (map (add-to-whitelist sale tier-id) accounts)
-              )   
+    (with-read sales sale
+      { "tiers":= tiers }
+      (validate-whitelist-tier-data tiers tier-data)
+
+      (with-capability (OPS)
+        (let
+          (
+            (handle-tier-data 
+              (lambda (tier-data:object{tier-whitelist-data})
+                (bind tier-data
+                  { "tier-id":= tier-id
+                  , "accounts":= accounts
+                  }
+                  (map (add-to-whitelist sale tier-id) accounts)
+                )   
+              )
             )
           )
+          (map (handle-tier-data) tier-data)
         )
-        (map (handle-tier-data) tier-data)
       )
     )
   )
@@ -352,7 +355,8 @@
     (require-capability (OPS))
 
     (insert whitelist-table (get-whitelist-id sale tier-id account)
-      { "tier-id": tier-id
+      { "sale": sale
+      , "tier-id": tier-id
       , "account": account
       , "purchase-amount": 0.0
       }
@@ -395,6 +399,10 @@
     (concat [sale "|" tier-id "|" account])
   )
 
+  (defcap WHITELIST_UPDATE () 
+    true
+  )
+
   (defun update-whitelist-purchase-amount-ops:string 
     (
       sale:string
@@ -423,6 +431,42 @@
     )
   )
 
+  (defun validate-whitelist-tier-data
+    (
+      tiers:[object{tier}]
+      tier-data:[object{tier-whitelist-data}]
+    )
+    @doc "Validates the whitelist data against the tiers."
+    (let*
+      (
+        (filter-tier
+          (lambda (tier-id tier:object{tier})
+            (= tier-id (at "tier-id" tier))
+          )  
+        )
+        (validate-tier-wl-data
+          (lambda (wl-tier-data:object{tier-whitelist-data})
+            ;; Validate that the tier-id is valid
+            (let
+              (
+                (tier (filter (filter-tier (at "tier-id" wl-tier-data)) tiers))
+              )
+              (enforce 
+                (!= (length tier) 0) 
+                (concat ["Couldn't find tier with id: " (at "tier-id" wl-tier-data)])
+              )
+              (enforce
+                (= (at "tier-type" (at 0 tier)) "WL")
+                "Can't add whitelisted accounts to a non-whitelist tier."
+              )
+            )
+          )  
+        )
+      )  
+      (map (validate-tier-wl-data) tier-data)
+    )
+  )
+
   ;; -------------------------------
   ;; Reserving
 
@@ -442,6 +486,7 @@
     @doc "Reserve event for token reservation"
     (compose-capability (WHITELIST_UPDATE))
     (compose-capability (WITHDRAW))
+    @event
     true
   )
 
@@ -608,7 +653,6 @@
     (select reservations (where 'sale (= sale)))
   )
 
-  (defun empty-guard () true)
   (defun get-reservation-for-account:object{reservation} 
     (
       sale:string 
@@ -679,7 +723,7 @@
             sale 
             token 
             (get-token-bank-for-sale sale)
-          ) 
+          )
           accounts
         )
       )

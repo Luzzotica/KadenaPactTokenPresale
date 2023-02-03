@@ -398,22 +398,19 @@
 
 
 
-(begin-tx "Whitelist: add, is whitelisted, update count")
+(begin-tx "Whitelist: check add, is whitelisted, and purchase amount")
 (use free.swag-token-sale)
 
 (let
   (
     (expected-is-whitelisted
       [
-        {"tier-id": "free", "account": "bob", "whitelisted": true, "purchase-amount": 0.0},
-        {"tier-id": "free", "account": "dave", "whitelisted": false, "purchase-amount": -1.0}
         {"tier-id": "discount", "account": "bob", "whitelisted": true, "purchase-amount": 0.0},
-        {"tier-id": "discount", "account": "alice", "whitelisted": true, "purchase-amount": 0.0},
-        {"tier-id": "discount", "account": "dave", "whitelisted": false, "purchase-amount": -1.0}
-        {"tier-id": "public", "account": "carol", "whitelisted": false, "purchase-amount": -1.0},
+        {"tier-id": "discount", "account": "dave", "whitelisted": true, "purchase-amount": 0.0},
+        {"tier-id": "public", "account": "bob", "whitelisted": false, "purchase-amount": -1.0},
         {"tier-id": "public", "account": "dave", "whitelisted": false, "purchase-amount": -1.0},
-        {"tier-id": "public", "account": "dave", "whitelisted": false, "purchase-amount": -1.0},
-        {"tier-id": "public", "account": "dave", "whitelisted": false, "purchase-amount": -1.0}
+        {"tier-id": "public", "account": "alice", "whitelisted": false, "purchase-amount": -1.0},
+        {"tier-id": "public", "account": "carol", "whitelisted": false, "purchase-amount": -1.0}
       ]
     )
     (check-whitelisted
@@ -439,75 +436,75 @@
   (map (check-whitelisted) expected-is-whitelisted)
 )
 
-(test-capability (WHITELIST_UPDATE))
-(expect-that "Can update count"
-  (= ["Write succeeded" "Write succeeded" "Write succeeded"])
-  [
-    (update-whitelist-purchase-amount "test-sale" "free" "bob" 1.0)
-    (update-whitelist-purchase-amount "test-sale" "discount" "bob" 1.0)
-    (update-whitelist-purchase-amount "test-sale" "discount" "alice" 2.0)
-  ]
-)
+(commit-tx)
+
+
+
+(begin-tx "Whitelist data validation works")
+(use free.swag-token-sale)
 
 (let
   (
-    (expected-is-whitelisted
+    (tier-datas
       [
-        {"tier-id": "free", "account": "bob", "whitelisted": true, "purchase-amount": 1.0},
-        {"tier-id": "discount", "account": "bob", "whitelisted": true, "purchase-amount": 1.0},
-        {"tier-id": "discount", "account": "alice", "whitelisted": true, "purchase-amount": 2.0}
+        [
+          {"tier-id": "discount2", "accounts": ["bob"]}
+        ],
+        [
+          {"tier-id": "discount", "accounts": ["bob"]}
+        ]
       ]
     )
-    (check-whitelisted
-      (lambda (whitelist-info:object)
-        (bind whitelist-info
-          { "tier-id":= tier-id
-          , "account":= account
-          , "whitelisted":= whitelisted
-          , "purchase-amount":= purchase-amount
-          }
-          (expect-that "whitelist is correct"
-            (= whitelisted)
-            (is-whitelisted "test-sale" tier-id account)
-          )
-          (expect-that "purchase amount is correct"
-            (= purchase-amount)
-            (get-whitelist-purchase-amount "test-sale" tier-id account)
-          )
+    (failures
+      [
+        "Couldn't find tier with id: discount2",
+        "Can't add whitelisted accounts to a non-whitelist tier."
+      ]
+    )
+    (check-validation
+      (lambda (whitelist-info failure:string)
+        (expect-failure
+          failure
+          (add-whitelist-to-sale "test-sale" whitelist-info)
         )
-      )
+      )  
     )
   )  
-  (map (check-whitelisted) expected-is-whitelisted)
+  (zip (check-validation) tier-datas failures)
 )
 
-(expect-that "Can update count"
-  (= ["Write succeeded" "Write succeeded" "Write succeeded" 0.0 0.0 0.0])
-  [
-    (update-whitelist-purchase-amount "test-sale" "free" "bob" 0.0)
-    (update-whitelist-purchase-amount "test-sale" "discount" "bob" 0.0)
-    (update-whitelist-purchase-amount "test-sale" "discount" "alice" 0.0)
-    (get-whitelist-purchase-amount "test-sale" "free" "bob")
-    (get-whitelist-purchase-amount "test-sale" "discount" "bob")
-    (get-whitelist-purchase-amount "test-sale" "discount" "alice")
-  ]
+(expect-failure "Fails if sale doesn't exist"
+  "Failure: Tx Failed: with-read: row not found: xyz"
+  (add-whitelist-to-sale "xyz" [])
 )
 
 (commit-tx)
 
 
 
-(begin-tx)
+(begin-tx "Test whitelist update ops")
 (use free.swag-token-sale)
 
-(env-keys ["ops"])
-(expect-that "Can update with ops"
-  (= "Write succeeded")
-  (update-whitelist-purchase-amount-ops "test-sale" "free" "bob" 1.0)
+(env-keys ["bob-key"])
+(expect-failure "Can't call update without ops"
+  "Tx Failed: Keyset failure (keys-all): 'free.swag-token-ops"
+  (update-whitelist-purchase-amount-ops "test-sale" "discount" "bob" 0.0)
 )
-(expect-that "Did update"
-  (= 1.0)
-  (get-whitelist-purchase-amount "test-sale" "free" "bob")
+
+(env-keys ["ops"])
+(expect-that "Can update purchase amount, and it has the desired effect"
+  (= ["Write succeeded" true 1.0 "Write succeeded" false -1.0 "Write succeeded" true 0.0])
+  [
+    (update-whitelist-purchase-amount-ops "test-sale" "discount" "bob" 1.0)
+    (is-whitelisted "test-sale" "discount" "bob")
+    (get-whitelist-purchase-amount "test-sale" "discount" "bob")
+    (update-whitelist-purchase-amount-ops "test-sale" "discount" "bob" -1.0)
+    (is-whitelisted "test-sale" "discount" "bob")
+    (get-whitelist-purchase-amount "test-sale" "discount" "bob")
+    (update-whitelist-purchase-amount-ops "test-sale" "discount" "bob" 0.0)
+    (is-whitelisted "test-sale" "discount" "bob")
+    (get-whitelist-purchase-amount "test-sale" "discount" "bob")
+  ]
 )
 
 (commit-tx)
@@ -530,7 +527,7 @@
   (reserve "test-sale" "bob" 100.0)
 )
 
-;; Free tier
+;; Whitelist tier
 (env-keys ["bob-key"])
 (env-sigs [
   {
@@ -549,7 +546,6 @@
   (= ["test-sale" "bob" 20.0])
   (at "params" (at 1 (env-events true)))
 )
-  ;  (env-events true)
 (expect-that "Total sold updated"
   (= 20.0)
   (get-total-sold-for-sale "test-sale")
@@ -564,7 +560,7 @@
 )
 (expect-failure "Can't reserve if not whitelisted"
   "Account is not whitelisted"
-  (reserve "test-sale" "dave" 1.0)
+  (reserve "test-sale" "alice" 1.0)
 )
 (expect-that "Total sold updated"
   (= 25.0)
@@ -581,8 +577,6 @@
     (at "is-paid" (get-reservation-for-account "test-sale" "bob"))
   ]
 )
-
-
 
 (commit-tx)
 
@@ -792,7 +786,7 @@
 )
 (expect-failure "add whitelist to sale"
   "Tx Failed: Keyset failure (keys-all): 'free.swag-token-ops"  
-  (add-whitelist-to-sale "" [])
+  (add-whitelist-to-sale "test-sale" [])
 )
 (expect-failure "add to whitelist"
   "Tx Failed: require-capability: not granted"  

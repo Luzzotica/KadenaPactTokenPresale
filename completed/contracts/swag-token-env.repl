@@ -74,12 +74,8 @@
     "sale-name": "test-sale",
     "tier-data": [
       {
-        "tier-id": "free",
-        "accounts": ["bob"]
-      },
-      {
         "tier-id": "discount",
-        "accounts": ["bob", "alice"]
+        "accounts": ["bob" "dave"]
       }
     ],
     "upgrade": false
