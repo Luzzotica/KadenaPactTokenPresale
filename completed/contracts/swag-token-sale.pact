@@ -700,6 +700,15 @@
   ;; -------------------------------
   ;; Payouts
 
+  (defun get-payout-accounts:[string] (sale:string)
+    @doc "Get all accounts that have a payout for the given sale"
+
+    (map 
+      (at "account") 
+      (get-unpaid-reservations-for-sale sale)
+    )
+  )
+
   (defun payout-reservations:[string]
     (
       sale:string 

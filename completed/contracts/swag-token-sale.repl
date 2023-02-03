@@ -721,6 +721,11 @@
 (begin-tx "Payouts")
 (use free.swag-token-sale)
 
+(expect-that "Accounts are correct"
+  (= ["alice" "bob"])
+  (get-payout-accounts "test-sale")
+)
+
 (env-keys ["ops"])
 (expect-that "Reservation is unpaid for bob now"
   (= [26.0 25.0 false])
@@ -749,6 +754,10 @@
 (expect-that "Has unpaid reservations"
   (= 0)
   (length (get-unpaid-reservations-for-sale "test-sale"))
+)
+(expect-that "Accounts are correct"
+  (= [])
+  (get-payout-accounts "test-sale")
 )
 (expect-that "Has tokens"
   (= [3974.0 26.0 1000.0])
