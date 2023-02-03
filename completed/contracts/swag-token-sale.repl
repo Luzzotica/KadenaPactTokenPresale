@@ -108,7 +108,7 @@
 ;; Test update the tiers
 (expect-that "Update tiers"
   (= "Write succeeded")
-  (update-sale-tiers
+  (update-tiers-for-sale
     "test-sale"
     [
       {
@@ -194,7 +194,7 @@
 ;; Test update the tiers
 (expect-that "Update tiers"
   (= "Write succeeded")
-  (update-sale-tiers
+  (update-tiers-for-sale
     "test-sale"
     [
       {
@@ -511,27 +511,29 @@
 
 
 
-(begin-tx "Reserve, reserve event discount and min/max limits")
+(begin-tx "Reserve, reserve event, min/max, and can't do 0")
 (use free.swag-token-sale)
-(env-chain-data { "block-time": (time "2000-01-01T00:00:00Z")})
+(env-chain-data {"block-time": (time "2000-01-01T00:00:00Z")})
 
-;; Clear the events up to this point
-(env-events true)
-
-(expect-failure "Can't purchase below minimum"
+(expect-failure "Can't purchase below the minimum"
+  "Amount must be greater than 0."
+  (reserve "test-sale" "bob" 0.0)
+)
+(expect-failure "Can't purchase below the minimum"
   "Purchase amount is less than minimum"
   (reserve "test-sale" "bob" 0.5)
 )
-(expect-failure "Can't purchase above maximum"
+(expect-failure "Can't purchase above the max"
   "Purchase limit reached"
   (reserve "test-sale" "bob" 100.0)
 )
 
-;; Whitelist tier
+(env-events true)
+
 (env-keys ["bob-key"])
 (env-sigs [
   {
-    "key": "bob-key", 
+    "key": "bob-key",
     "caps": [
       (coin.GAS)
       (coin.TRANSFER "bob" (get-fungible-bank-for-sale "test-sale") 2.5)
@@ -542,30 +544,32 @@
   (= true)
   (reserve "test-sale" "bob" 2.0)
 )
-(expect-that "Events emitted" 
+(expect-that "Reserve event is emitted"
   (= ["test-sale" "bob" 20.0])
   (at "params" (at 1 (env-events true)))
 )
-(expect-that "Total sold updated"
+(expect-that "total sold updated"
   (= 20.0)
   (get-total-sold-for-sale "test-sale")
 )
-(expect-that "Reserving less than min succeeds if already reserved"
+(expect-that "Reserving less than the min succeeds if already reserved"
   (= true)
   (reserve "test-sale" "bob" 0.5)
 )
-(expect-that "Total sold updated"
+(expect-that "total sold updated"
   (= 25.0)
   (get-total-sold-for-sale "test-sale")
 )
+
 (expect-failure "Can't reserve if not whitelisted"
   "Account is not whitelisted"
   (reserve "test-sale" "alice" 1.0)
 )
-(expect-that "Total sold updated"
+(expect-that "total sold not updated"
   (= 25.0)
   (get-total-sold-for-sale "test-sale")
 )
+
 (expect-that "Available supply works"
   (= 4975.0)
   (get-available-supply-for-sale "test-sale")
@@ -618,50 +622,48 @@
 
 
 
-(begin-tx "Reserve, reserve event discount")
+(begin-tx "Reserve, public")
 (use free.swag-token-sale)
+(env-chain-data {"block-time": (time "2000-01-02T00:00:00Z")})
 
 (env-keys ["alice-key" "bob-key"])
-(env-sigs [
-  {
-    "key": "alice-key", 
-    "caps": [
-      (coin.GAS)
-      (coin.TRANSFER "alice" (get-fungible-bank-for-sale "test-sale") 30.0)
-    ]
-  },
-  {
-    "key": "bob-key", 
-    "caps": [
-      (coin.GAS)
-      (coin.TRANSFER "bob" (get-fungible-bank-for-sale "test-sale") 20.0)
-    ]
-  }
-])
-(env-chain-data { "block-time": (time "2000-01-02T00:00:00Z")})
+(env-sigs
+  [
+    {
+      "key": "alice-key",
+      "caps": [
+        (coin.GAS)
+        (coin.TRANSFER "alice" (get-fungible-bank-for-sale "test-sale") 30.0)
+      ]
+    },
+    {
+      "key": "bob-key",
+      "caps": [
+        (coin.GAS)
+        (coin.TRANSFER "bob" (get-fungible-bank-for-sale "test-sale") 20.0)
+      ]
+    }
+  ]  
+)
 (expect-that "Reserving succeeds even if below min for bob"
   (= true)
-  (reserve "test-sale" "bob" 0.1)
+  (reserve "test-sale" "bob" 0.01)
 )
-(expect-that "Events emitted" 
-  (= ["test-sale" "bob" 10.0])
+(expect-that "Reserve event is emitted"
+  (= ["test-sale" "bob" 1.0])
   (at "params" (at 1 (env-events true)))
 )
-(expect-that "Total sold updated"
-  (= 35.0)
-  (get-total-sold-for-sale "test-sale")
-)
 
-(expect-failure "Can't purchase below minimum"
+(expect-failure "can't purchase below minimum"
   "Purchase amount is less than minimum"
   (reserve "test-sale" "alice" 0.01)
 )
-(expect-failure "Can't purchase more than total supply"
-  "Purchase amount exceeds total supply"
+(expect-failure "can't purchase more than total supply minimum"
+  "Purchase amount exceeds total supply"  
   (reserve "test-sale" "alice" 1000.0)
 )
 (expect-failure "Can't purchase more than total supply includes total sold"
-  "Purchase amount exceeds total supply"
+  "Purchase amount exceeds total supply"  
   (reserve "test-sale" "alice" 49.9)
 )
 (expect-that "Reserving succeeds"
@@ -669,26 +671,28 @@
   (reserve "test-sale" "alice" 10.0)
 )
 (expect-that "Bank now has money"
-  (= 12.6)
+  (= 12.51)
   (coin.get-balance (get-fungible-bank-for-sale "test-sale"))
 )
 (expect-that "Bob and alice spent money"
-  (= [997.4 990.0])
+  (= [997.49 990.0])
   [
     (coin.get-balance "bob")
     (coin.get-balance "alice")
   ]
 )
-(expect-that "Total sold updated"
-  (= 1035.0)
+
+(expect-that "total sold updated"
+  (= 1026.0)
   (get-total-sold-for-sale "test-sale")
 )
 (expect-that "Available supply works"
-  (= 3965.0)
+  (= 3974.0)
   (get-available-supply-for-sale "test-sale")
 )
+
 (expect-that "Can get reservation for account"
-  (= [35.0 false])
+  (= [26.0 false])
   [
     (at "amount-token" (get-reservation-for-account "test-sale" "bob"))
     (at "is-paid" (get-reservation-for-account "test-sale" "bob"))
@@ -699,12 +703,27 @@
 
 
 
+(begin-tx "Enforce sale status")
+(use free.swag-token-sale)
+(env-keys ["ops"])
+
+(update-status-for-sale "test-sale" "CANCELLED")
+(expect-failure "can't purchase from canceled sale"
+  "Sale is not active"
+  (reserve "test-sale" "alice" 0.01)
+)
+(update-status-for-sale "test-sale" "ACTIVE")
+
+(commit-tx)
+
+
+
 (begin-tx "Payouts")
 (use free.swag-token-sale)
 
 (env-keys ["ops"])
 (expect-that "Reservation is unpaid for bob now"
-  (= [35.0 25.0 false])
+  (= [26.0 25.0 false])
   [
     (at "amount-token" (get-reservation-for-account "test-sale" "bob"))
     (at "amount-token-paid" (get-reservation-for-account "test-sale" "bob"))
@@ -720,7 +739,7 @@
   (payout-reservations "test-sale" ["bob" "alice"])
 )
 (expect-that "Reservation was marked as paid"
-  (= [35.0 35.0 true])
+  (= [26.0 26.0 true])
   [
     (at "amount-token" (get-reservation-for-account "test-sale" "bob"))
     (at "amount-token-paid" (get-reservation-for-account "test-sale" "bob"))
@@ -732,7 +751,7 @@
   (length (get-unpaid-reservations-for-sale "test-sale"))
 )
 (expect-that "Has tokens"
-  (= [3965.0 35.0 1000.0])
+  (= [3974.0 26.0 1000.0])
   [
     (free.swag-token.get-balance (get-token-bank-for-sale "test-sale"))
     (free.swag-token.get-balance "bob")
@@ -753,7 +772,7 @@
   (withdraw-from-token-bank "test-sale" "bob" 1000.0)
 )
 (expect-that "Tokens updated"
-  (= [2965.0 1035.0 1000.0])
+  (= [2974.0 1026.0 1000.0])
   [
     (free.swag-token.get-balance (get-token-bank-for-sale "test-sale"))
     (free.swag-token.get-balance "bob")
@@ -778,11 +797,11 @@
 )
 (expect-failure "update sale status"
   "Tx Failed: Keyset failure (keys-all): 'free.swag-token-ops"  
-  (update-sale-status "" "")
+  (update-status-for-sale "" "")
 )
 (expect-failure "update sale tiers"
   "Tx Failed: Keyset failure (keys-all): 'free.swag-token-ops"  
-  (update-sale-tiers "" [])
+  (update-tiers-for-sale "" [])
 )
 (expect-failure "add whitelist to sale"
   "Tx Failed: Keyset failure (keys-all): 'free.swag-token-ops"  

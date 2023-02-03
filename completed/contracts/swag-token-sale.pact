@@ -30,7 +30,7 @@
 
   (defconst SALE_STATUS_ACTIVE:string "ACTIVE")
   (defconst SALE_STATUS_COMPLETE:string "COMPLETE")
-  (defconst SALE_STATUSES:[string] ["ACTIVE" "CANCELED" "COMPLETE"])
+  (defconst SALE_STATUSES:[string] ["ACTIVE" "CANCELLED" "COMPLETE"])
 
   (defschema tier
     @doc "Stores the start time, end time, tier type (WL, PUBLIC), \
@@ -123,27 +123,21 @@
     )
   )
 
-  (defun update-sale-status:string (sale:string status:string)
-    @doc "End sale by setting its status"
+  (defun update-status-for-sale (sale:string status:string)
+    @doc "Update the status of the sale."
+
     (with-capability (OPS)
       (validate-status status)
-      (update sales sale 
-        { "status": status }
-      )
+      (update sales sale { "status": status })
     )
   )
 
-  (defun update-sale-tiers 
-    (
-      sale:string 
-      tiers:[object:{tier}]
-    )
-    @doc "Updates the tiers of the given sale"
+  (defun update-tiers-for-sale (sale:string tiers:[object:{tier}])
+    @doc "Update the tiers for the sale."
+
     (with-capability (OPS)
       (validate-tiers tiers)
-      (update sales sale
-        { "tiers": tiers }
-      )
+      (update sales sale { "tiers": tiers })
     )
   )
 
@@ -486,7 +480,6 @@
     @doc "Reserve event for token reservation"
     (compose-capability (WHITELIST_UPDATE))
     (compose-capability (WITHDRAW))
-    @event
     true
   )
 
@@ -507,7 +500,7 @@
       amount-fungible:decimal
     )
     @doc "Reserve tokens for the given account."
-    (enforce (> amount-fungible 0.0) "Amount must be greater than 0")
+    (enforce (> amount-fungible 0.0) "Amount must be greater than 0.")
 
     (with-capability (RESERVE)
       (with-read sales sale 
