@@ -1,6 +1,6 @@
-(namespace "free")
+(namespace "n_747f0d4342e6af9f3ce85b175da61bbc583582de")
 
-(define-keyset "free.swag-token-ops")
+(define-keyset "n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-ops")
 
 (module swag-token-sale GOV
 
@@ -8,12 +8,12 @@
   ;; Governance and Permissions
 
   (defcap GOV ()
-    (enforce-keyset "free.swag-token-gov")
+    (enforce-keyset "n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-gov")
     (compose-capability (OPS_INTERNAL))
   )
 
   (defcap OPS ()
-    (enforce-keyset "free.swag-token-ops")
+    (enforce-keyset "n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-ops")
     (compose-capability (OPS_INTERNAL))
   )
 
@@ -828,7 +828,7 @@
       (read-msg "sale") 
       (read-keyset "bank-guard")
       coin
-      free.swag-token
+      n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token
     )
     (add-whitelist-to-sale 
       (read-msg "sale-name")

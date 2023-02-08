@@ -1,15 +1,27 @@
 (load "kda-env/init.repl")
 
 
+(begin-tx "Create our namespace")
+
+(use basic-guards)
+(define-namespace 
+  "n_747f0d4342e6af9f3ce85b175da61bbc583582de" 
+  GUARD_SUCCESS 
+  GUARD_SUCCESS
+)
+
+(commit-tx)
+
+
 (begin-tx "Load swag token environment")
 
 (env-keys ["gov" "ops"])
 (env-data
   {
-    "free.swag-token-gov": {
+    "n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-gov": {
       "keys": ["gov"], "pred": "keys-all"
     },
-    "free.swag-token-ops": {
+    "n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-ops": {
       "keys": ["ops"], "pred": "keys-all"
     },
     "init-data": { 

@@ -2,16 +2,16 @@
 
 
 (begin-tx "Test governance")
-(use free.swag-token)
+(use n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token)
 
 (env-keys [])
 (expect-failure "Can't acquire GOV cap without gov key"
-  "Keyset failure (keys-all): 'free.swag-token-gov"
+  "Keyset failure (keys-all): 'n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-gov"
   (test-capability (GOV))
 )
 (env-keys ["test"])
 (expect-failure "Can't acquire GOV cap without gov key"
-  "Keyset failure (keys-all): 'free.swag-token-gov"
+  "Keyset failure (keys-all): 'n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-gov"
   (test-capability (GOV))
 )
 
@@ -26,7 +26,7 @@
 
 
 (begin-tx "Test init and tokenomics")
-(use free.swag-token)
+(use n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token)
 
 (expect-that "ROOT has tokens"
   (= 8000.0)
@@ -66,7 +66,7 @@
 
 (env-keys ["test"])
 (expect-failure "Must have permissions to init token"
-  "Keyset failure (keys-all): 'free.swag-token-gov"
+  "Keyset failure (keys-all): 'n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-gov"
   (init-token (read-msg "init-data"))
 )
 
