@@ -1,6 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit'
-import { local, localAndSend, signAndSend } from '../../KDAWallet/store/kadenaSlice';
-import { createCap } from '../../KDAWallet/utils/utils';
+import { local, localAndSend } from '../../KDAWallet/store/kadenaSlice';
+import { createDappCap } from '../../KDAWallet/utils/utils';
 import { PRECISION } from '../utils/constants';
 import { getCurrentTier } from './saleSliceHelpers';
 
@@ -64,7 +64,7 @@ export const initContractData = (chainId) => {
       (${contract}.get-sale "${saleName}")
     `
     // console.log(pactCode);
-    var result = await dispatch(local(chainId, pactCode, {}, [], 150000, 1e-8, true));
+    var result = await dispatch(local(chainId, pactCode, {}, 150000, 1e-8));
     // console.log(result);
 
     if (result.result.status = 'success') {
@@ -103,7 +103,7 @@ export const initAccountData = (chainId, account) => {
           pactCode += ',';
         }
         pactCode += `
-          "${tiers[i]['tier-id']}": (${contract}.get-whitelist-purchase-amount "${sale}" "${tiers[i]['tier-id']}" "${account}")
+          "${tiers[i]['tier-id']}": (${contract}.get-whitelisted-purchase-amount "${sale}" "${tiers[i]['tier-id']}" "${account}")
         `
         wlTierCount++;
       }
@@ -111,8 +111,8 @@ export const initAccountData = (chainId, account) => {
     pactCode += '}]'
     // console.log(pactCode);
 
-    var result = await dispatch(local(chainId, pactCode, {}, [], 150000, 1e-8, true));
-    // console.log(result);
+    var result = await dispatch(local(chainId, pactCode, {}, 150000, 1e-8));
+    console.log(result);
 
     if (result.result.status = 'success') {
       // console.log(result.result.data);
@@ -139,11 +139,10 @@ export const reserveTokens = (chainId, account, amount) => {
     // Get the bods and items for the account
     var pactCode = `(${contract}.reserve "${saleName}" "${account}" ${amount.toFixed(PRECISION)})`;
     var caps = [
-      createCap("Gas", "Allows paying for gas", "coin.GAS", []),
-      createCap("Reserve", "Allows reserving tokens", `${contract}.RESERVE`, []),
-      createCap("Transfer", "Allows sending KDA to the specified address", "coin.TRANSFER", [account, bank, amount])
+      createDappCap("Gas", "Allows paying for gas", "coin.GAS", []),
+      createDappCap("Reserve", "Allows reserving tokens", `${contract}.RESERVE`, []),
+      createDappCap("Transfer", "Allows sending KDA to the specified address", "coin.TRANSFER", [account, bank, amount])
     ]
-    // var result = await dispatch(local(chainId, pactCode, {}, caps, 2000 * amount, 1e-8, false, true));
     var result = await dispatch(localAndSend(chainId, 
       pactCode, 
       {}, 

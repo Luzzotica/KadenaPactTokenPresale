@@ -25,10 +25,11 @@ const xwallet = {
           signingCmd: signingCommand
       }
     }
+    // console.log(req);
     var cmd = await window.kadena.request(req);
     // console.log(cmd);
     
     return cmd.signedCmd;
-  }
+  },
 }
 export default xwallet;

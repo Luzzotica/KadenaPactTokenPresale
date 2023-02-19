@@ -2,7 +2,7 @@ import { toast } from "react-toastify";
 import TitleMessageRender from "./TitleMessageRender";
 
 export const walletConnectedToastManager = (provider) => {
-  console.log(provider);
+  // console.log(provider);
   if (provider && provider !== '') {
     toast.success('Wallet connected');
   }
@@ -27,7 +27,7 @@ export const txToastManager = async (txData) => {
   if ('listenPromise' in txData) {
     let id = toast.loading(<TitleMessageRender title={`Transaction Sent!`} message={`TX ID: ${txData.reqKey}`}/>, { type: toast.TYPE.INFO });
     let result = await txData.listenPromise;
-    console.log(result);
+    // console.log(result);
 
     if (result.result.status === "success") {
       toast.update(id, { render: <TitleMessageRender title={`Success`} message={`${result.result.data}`}/>, type: toast.TYPE.SUCCESS, isLoading: false, autoClose: 5000 });

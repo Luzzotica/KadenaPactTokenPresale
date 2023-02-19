@@ -20,7 +20,8 @@ import { initAccountData, initContractData } from './store/saleSlice';
 import './index.css'
 
 function TokenSalePage() {
-  const chainId = import.meta.env.VITE_CHAIN_ID
+  const chainId = import.meta.env.VITE_CHAIN_ID;
+  const networkId = import.meta.env.VITE_NETWORK_ID;
 
   const dispatch = useDispatch();
   const account = useSelector(state => state.kadenaInfo.account);
@@ -65,11 +66,8 @@ function TokenSalePage() {
         buttonStyle="bg-blue-500 border-slate-100 border py-2 px-4 rounded-xl hover:bg-blue-700 active:bg-blue-900 focus:bg-blue-600 transition duration-150 ease-out"
       />
       <FlexColumn className='gap-2 fixed px-2 bottom-2 z-10 w-full sm:w-48 place-items-center sm:place-items-start'>
-        <div className="w-20 text-center rounded-3xl bg-slate-900 py-1 px-1">
-          <span className="text-sm text-white">Chain {chainId}</span>
-        </div>
         {account !== '' ? 
-          <FlexColumn className='w-max sm:w-auto gap-1 rounded-3xl bg-slate-900 py-2 px-2'>
+          <FlexColumn className='w-40 sm:w-auto gap-1 rounded-3xl bg-slate-900 py-2 px-2'>
             <CustomButton
               className='text-white'
               text={"Disconnect"}
@@ -79,6 +77,9 @@ function TokenSalePage() {
           : 
           <></>
         }
+        <div className="w-40 text-center rounded-3xl bg-slate-900 py-1 px-1">
+          <span className="text-sm text-white">{networkId}, Chain {chainId}</span>
+        </div>
       </FlexColumn>
       <div className='hero bg-zinc-800 bg-hero bg-cover bg-left bg-no-repeat text-white py-10'>
         <FlexColumn className='gap-10'>

@@ -1,5 +1,5 @@
 function CustomButton(props) {
-  console.log(props.disabled);
+  // console.log(props.disabled);
   return (
     <button
       disabled={props.disabled}

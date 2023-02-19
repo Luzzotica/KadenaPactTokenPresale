@@ -2,7 +2,7 @@ import { createSlice } from '@reduxjs/toolkit';
 import { EVENT_NEW_MSG, EVENT_NEW_TX, EVENT_WALLET_CONNECT } from '../constants/constants';
 import providers from '../providers/providers';
 import { tryLoadLocal, trySaveLocal } from '../utils/store';
-import { createPactCommand, createSigningCommand, listenTx, localCommand, sendCommand } from '../utils/utils';
+import { createReadonlyPactCommand, createSigningRequest, listenTx, localCommand, sendCommand } from '../utils/utils';
 import { hideConnectWalletModal } from './connectWalletModalSlice';
 
 const KADENA_STORE_ACCOUNT_KEY = 'KADENA_STORE_ACCOUNT_KEY';
@@ -138,55 +138,13 @@ export const disconnectProvider = () => {
   }
 }
 
-export const local = (chainId, pactCode, envData, caps=[], 
-  gasLimit=15000, gasPrice=1e-5, dontUpdate=false, sign=false) => {
+export const local = (chainId, pactCode, envData, 
+  gasLimit=15000, gasPrice=1e-5) => {
   return async function(dispatch, getState) {
-    var cmd = {}
-    if (sign) {
-      let providerName = getState().kadenaInfo.provider;
-      if (providerName === '') {
-        const msg = {
-          type: 'error',
-          data: `No wallet connected`,
-        };
-        const event = new CustomEvent(EVENT_NEW_MSG, { detail: msg });
-        document.dispatchEvent(event);
-        dispatch(kadenaSlice.actions.addMessage(msg));
-        return;
-      }
-      // console.log('got here?');
-      
-      let provider = providers[providerName];
-      let signingCmd = createSigningCommand(
-        getState, 
-        chainId, 
-        pactCode, 
-        envData, 
-        caps, 
-        gasLimit, 
-        gasPrice
-      );
-      // console.log(signingCmd);
-      cmd = await provider.sign(getState, signingCmd);
-    }
-    else {
-      cmd = createPactCommand(getState, chainId, pactCode, envData, gasLimit, gasPrice);
-    }
-    // console.log('cmd', cmd);
-
-    if (dontUpdate) {
-      let res = await localCommand(getState, chainId, cmd);
-      // console.log(res);
-      return res;
-    }
-    
+    var cmd = createReadonlyPactCommand(getState, chainId, pactCode, envData, gasLimit, gasPrice);
     
     try {
-      let res = await localCommand(getState, chainId, cmd);
-      const e = new CustomEvent(EVENT_NEW_TX, { detail: res });
-      document.dispatchEvent(e);
-      dispatch(kadenaSlice.actions.addTransaction(res));
-      return res;
+      return await localCommand(getState, chainId, cmd);
     }
     catch (e) {
       const event = new CustomEvent(EVENT_NEW_MSG, { detail: str(e) });
@@ -200,7 +158,7 @@ export const local = (chainId, pactCode, envData, caps=[],
 }
 
 export const localAndSend = (chainId, pactCode, envData, 
-  caps=[], gasLimit=75000, gasPrice=1e-8, b1=false, b2=false) => {
+  caps=[], gasLimit=75000, gasPrice=1e-8) => {
   return async function sign(dispatch, getState) {
     
     try {
@@ -214,22 +172,25 @@ export const localAndSend = (chainId, pactCode, envData,
       }
 
       let provider = providers[providerName];
-      let signingCmd = createSigningCommand(
+      var signingRequest = createSigningRequest(
         getState, 
         chainId, 
         pactCode, 
         envData, 
-        caps, 
+        caps,
         gasLimit, 
-        gasPrice
+        gasPrice, 
+        caps,
       );
-      // console.log(signingCmd);
-      let signedCmd = await provider.sign(getState, signingCmd);
-      let localRes = await localCommand(getState, chainId, signedCmd);
+      let cmd = await provider.sign(getState, signingRequest);
+      // console.log(cmd);
+      let localRes = await localCommand(getState, chainId, cmd);
+      // console.log(localRes);
+
       if (localRes.result.status === 'success') {
         // console.log('signingCmd');
         // console.log(signedCmd);
-        let sendRes = await sendCommand(getState, chainId, signedCmd);
+        let sendRes = await sendCommand(getState, chainId, cmd);
         // console.log(res);
 
         let reqKey = sendRes.requestKeys[0];
@@ -258,64 +219,7 @@ export const localAndSend = (chainId, pactCode, envData,
       }
     }
     catch (e) {
-      const msg = {
-        type: 'error',
-        data: `Failed to sign command: ${e}`,
-      };
-      const event = new CustomEvent(EVENT_NEW_MSG, { detail: msg });
-      document.dispatchEvent(event);
-      dispatch(kadenaSlice.actions.addMessage(msg));
-      // toast.error('Failed to sign command');
-    }
-  };
-}
-
-export const signAndSend = (chainId, pactCode, envData, 
-  caps=[], gasLimit=75000, gasPrice=1e-8) => {
-  return async function sign(dispatch, getState) {
-    
-    try {
-      let providerName = getState().kadenaInfo.provider;
-      if (providerName === '') {
-        dispatch(kadenaSlice.actions.addMessage({
-          type: 'error',
-          data: `No wallet connected`,
-        }));
-        return;
-      }
-
-      let provider = providers[providerName];
-      let signingCmd = createSigningCommand(
-        getState, 
-        chainId, 
-        pactCode, 
-        envData, 
-        caps, 
-        gasLimit, 
-        gasPrice
-      );
-      console.log(signingCmd);
-      let signedCmd = await provider.sign(getState, signingCmd);
-      console.log('signingCmd');
-      console.log(signedCmd);
-      let res = await sendCommand(getState, chainId, signedCmd);
-      // console.log(res);
-
-      let reqKey = res.requestKeys[0];
-      let reqListen = listenTx(getState, chainId, reqKey);
-      let txData = {
-        reqKey: reqKey,
-        listenPromise: reqListen,
-      };
-      // console.log("tx data");
-      // console.log(txData);
-      dispatch(kadenaSlice.actions.addTransaction(txData));
-      const e = new CustomEvent(EVENT_NEW_TX, { detail: txData });
-      document.dispatchEvent(e);
-
-      return txData;
-    }
-    catch (e) {
+      console.log(e);
       const msg = {
         type: 'error',
         data: `Failed to sign command: ${e}`,
