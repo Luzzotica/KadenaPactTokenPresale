@@ -19,7 +19,7 @@ If you'd like to learn how to build this all from scratch so you can kickstart y
 
 ## Update the Smart Contracts and Deploy Data
 
-First thing for you to do is update the module names in each of the smart contracts: `n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token` and `n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-sale` are both taken.  
+First thing for you to do is update the module names in each of the smart contracts: `n_532057688806c2750b8907675929ffb2488e93c0.swag-token` and `n_532057688806c2750b8907675929ffb2488e93c0.swag-token-sale` are both taken.  
 
 Keep in mind that when you do this, the tests will no longer work unless you update the references to the smart contracts there.
 

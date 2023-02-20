@@ -1,19 +1,18 @@
-(namespace "n_747f0d4342e6af9f3ce85b175da61bbc583582de")
+(namespace "n_532057688806c2750b8907675929ffb2488e93c0")
 
-(define-keyset "n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-ops")
+(define-keyset "n_532057688806c2750b8907675929ffb2488e93c0.swag-token-ops")
 
 (module swag-token-sale GOV
-
   ;; -------------------------------
   ;; Governance and Permissions
 
   (defcap GOV ()
-    (enforce-keyset "n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-gov")
+    (enforce-keyset "n_532057688806c2750b8907675929ffb2488e93c0.swag-token-gov")
     (compose-capability (OPS_INTERNAL))
   )
 
   (defcap OPS ()
-    (enforce-keyset "n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-ops")
+    (enforce-keyset "n_532057688806c2750b8907675929ffb2488e93c0.swag-token-ops")
     (compose-capability (OPS_INTERNAL))
   )
 
@@ -30,7 +29,7 @@
 
   (defconst SALE_STATUS_ACTIVE:string "ACTIVE")
   (defconst SALE_STATUS_COMPLETE:string "COMPLETE")
-  (defconst SALE_STATUSES:[string] ["ACTIVE" "CANCELLED" "COMPLETE"])
+  (defconst SALE_STATUSES:[string] ["ACTIVE" "COMPLETE" "CANCELLED"])
 
   (defschema tier
     @doc "Stores the start time, end time, tier type (WL, PUBLIC), \
@@ -45,9 +44,10 @@
     max-token:decimal
   )
 
-  (defschema sale ;; ID is name
+  (defschema sale
     @doc "Defines a sale with a name, \ 
-    \ total supply, total-sold, status, fungible, and tiers. \
+    \ total supply, total-sold, status, fungible, tiers, \
+    \ and the fungible and token bank accounts. \
     \ The ID of the sale is the name."
     name:string
     token-name:string
@@ -64,16 +64,15 @@
   (deftable sales:{sale})
 
   (defcap WITHDRAW ()
-    true
+    true 
   )
 
-  (defun require-WITHDRAW:bool (sale:string)
+  (defun require-WITHDRAW (sale:string)
     (require-capability (WITHDRAW))
     true
   )
 
   (defun get-token-bank-guard-for-sale:guard (sale:string)
-    @doc "Creates a guard that is used for the token bank of the sale"
     (create-user-guard (require-WITHDRAW sale))
   )
 
@@ -81,25 +80,24 @@
     (create-principal (get-token-bank-guard-for-sale sale))
   )
 
-  (defschema in-create-sale
-    @doc "A data structure for the sale data"
+  (defschema in-create-sale 
     name:string
     token-name:string
     total-supply:decimal
-    tiers:[object:{tier}]
+    tiers:[object:{tier}]  
   )
 
   (defun create-sale:string 
     (
-      in:object
+      in:object{in-create-sale}
       fungible-bank-guard:guard
       fungible:module{fungible-v2}
       token:module{fungible-v2}
-    )
-    @doc "Create sale with parameters."
-    
+    )  
+    @doc "Create a sale with the given paramters."
+
     (with-capability (OPS)
-      (enforce (> (at "total-supply" in) 0.0) "Token total supply must be positive")
+      (enforce (>= (at "total-supply" in) 0.0) "Total supply must be greater than or equal to 0")
       (validate-tiers (at "tiers" in))
 
       (token::create-account
@@ -110,12 +108,12 @@
       (insert sales (at "name" in)
         (+
           in
-          { "fungible-bank-guard": fungible-bank-guard
+          { "fungible": fungible
+          , "fungible-bank-guard": fungible-bank-guard
           , "fungible-bank-account": (create-principal fungible-bank-guard)
-          , "token-bank-account": (get-token-bank-for-sale (at "name" in))
-          , "status": "ACTIVE"
-          , "fungible": fungible
           , "token": token
+          , "token-bank-account": (get-token-bank-for-sale (at "name" in))
+          , "status": SALE_STATUS_ACTIVE
           , "total-sold": 0.0
           }
         )
@@ -142,135 +140,134 @@
   )
 
   (defun validate-status:bool (status:string)
-    @doc "Validates the status is one of the valid statuses"
-    (enforce 
-      (contains status SALE_STATUSES)
+    (enforce
+      (contains status SALE_STATUSES)  
       "Invalid status"
     )
-    true
   )
 
   (defun validate-tiers:bool (tiers:[object:{tier}])
     @doc "Validates the tier start and end time, ensuring they don't overlap \
-    \ and that start is before end for each."
+    \ and that the start is before the end for each tier. \
+    \ Validate the tier type (WL or PUBLIC), validate that token-per-fungible is greater than 0, \
+    \ and that the min-token is less than the max-token (If not negative)."
+
     (let*
       (
         (no-overlap
           (lambda (tier:object{tier} other:object{tier})
             ;; If the other is the same as the tier, don't check it
             (if (!= (at "tier-id" tier) (at "tier-id" other))
-              (enforce 
+              (enforce
                 (or
-                  ;; Start and end of other is before start of tier
-                  (and? 
+                  ;; Start and end of other is before the start of our tier
+                  (and?
                     (<= (at "start-time" other))
-                    (<= (at "end-time" other)) 
+                    (<= (at "end-time" other))
                     (at "start-time" tier)
                   )
-                  ;; Start and end of other is after end of tier
+                  ;; Start and end of other is after the end of our tier
                   (and?
+                    (>= (at "start-time" other))
                     (>= (at "end-time" other))
-                    (>= (at "start-time" other)) 
                     (at "end-time" tier)
                   )
                 )
                 "Tiers overlap"
               )
-              []
+              "Tiers not overlapping"
             )
-          )
+          )  
         )
-        (validate-tier 
+        (validate-tier
           (lambda (tier:object{tier})
-            ;; Enforce start time is before end time, 
-            ;; and that the tier type is valid,
-            ;; and that the token-per-fungible is positive
+            ;; Enforce that start is before or equal to end
+            ;; and that the tier type is valid
+            ;; and that the token-per-fungible is greater or equal to 0
+            ;; and that the min-token is less than the max-token (If not negative)
             (enforce
-              (<= (at "start-time" tier) (at "end-time" tier)) 
+              (<= (at "start-time" tier) (at "end-time" tier))
               "Start must be before end"
             )
             (enforce
-              (or 
-                (= (at "tier-type" tier) TIER_TYPE_WL)
-                (= (at "tier-type" tier) TIER_TYPE_PUBLIC)
-              )
+              (contains (at "tier-type" tier) [TIER_TYPE_WL TIER_TYPE_PUBLIC])
               "Invalid tier type"
             )
             (enforce
               (>= (at "token-per-fungible" tier) 0.0)
               "Token per fungible must be greater than or equal to 0"
             )
-            (if 
-              (and 
+            (if
+              (and
                 (>= (at "min-token" tier) 0.0)
-                (>= (at "max-token" tier) 0.0)
+                (>= (at "max-token" tier) 0.0)  
               )
               (enforce
                 (<= (at "min-token" tier) (at "max-token" tier))
-                "min-token must be less than or equal to max-token"
+                "Min token must be less than or equal to max token"
               )
               []
             )
-            
-            ;; Loop through all the tiers and ensure they don't overlap
+
             (map (no-overlap tier) tiers)
-          )
+          )  
         )
       )
       (map (validate-tier) tiers)
     )
   )
 
+  (defun get-sale:object{sale} (sale:string)
+    @doc "Get the sale object for the given sale name."
+
+    (read sales sale)
+  )
+
   (defun get-current-tier-for-sale:object{tier} (sale:string)
     @doc "Gets the current tier for the sale"
     (with-read sales sale
       { "tiers":= tiers }
-      (get-current-tier tiers)
+      (get-current-tier tiers)  
     )
   )
 
   (defun get-current-tier:object{tier} (tiers:[object:{tier}])
     @doc "Gets the current tier from the list based on block time"
+
     (let*
       (
         (now (at "block-time" (chain-data)))
         (filter-tier
           (lambda (tier:object{tier})
-            (if (= (at "start-time" tier) (at "end-time" tier)) 
-              (>= now (at "start-time" tier))  
-              (and? 
+            (if (= (at "start-time" tier) (at "end-time" tier))
+              (<= (at "start-time" tier) now)
+              (and?
                 (<= (at "start-time" tier))
                 (> (at "end-time" tier))
                 now
               )
             )
-          )
+          )  
         )
         (filtered-tiers (filter (filter-tier) tiers))
       )
-      (enforce (> (length filtered-tiers) 0) (format "No tier found: {}" [now]))
+      (enforce (> (length filtered-tiers) 0) "No tier is active")
       (at 0 filtered-tiers)
     )
   )
 
-  (defun get-sale:object{sale} (sale:string)
-    @doc "Returns sale object"
-
-    (read sales sale)
-  )
-
   (defun get-current-sale-price:decimal (sale:string)
-    @doc "Gets the token amount per kda for the given sale"
+    @doc "Get the current sale price for the given sale"
 
     (at "token-per-fungible" (get-current-tier-for-sale sale))
   )
 
   (defun get-available-supply-for-sale:decimal (sale:string)
-    @doc "Get remaining token supply in specified sale"
+    @doc "Get remaining supply for the given sale"
 
-    (with-read sales sale 
-      { "total-supply" := total-supply
-      , "total-sold" := total-sold
+    (with-read sales sale
+      { "total-supply":= total-supply
+      , "total-sold":= total-sold
       }
       (- total-supply total-sold)
     )
@@ -281,8 +278,6 @@
   )
 
   (defun get-total-sold-for-sale:decimal (sale:string)
-    @doc "Get token supply of specified sale"
-
     (at "total-sold" (read sales sale ["total-sold"]))
   )
 
@@ -294,9 +289,10 @@
   ;; Whitelist Handling
 
   (defschema whitelisted
-    @doc "Stores the account of the whitelisted user, the tier-id, \
-    \ and amount they have purchaesed. The id is 'sale|tier-id|account'."
-    sale:string
+    @doc "Store the account of the whitelisted user, the tier-id they are whitelisted for, \
+    \ the sale that the tier is in, and the amount of tokens they are allowed to purchase. \
+    \ The id is 'sale|tier-id|account'."
+    sale:string 
     tier-id:string
     account:string
     purchase-amount:decimal
@@ -304,32 +300,34 @@
   (deftable whitelist-table:{whitelisted})
 
   (defschema tier-whitelist-data
-    @doc "A data structure for the whitelist data for a tier"
+    @doc "A data structure for the whitelist data for a tier. \
+    \ Passed into the add whitelist to sale function."
     tier-id:string
-    accounts:[string]
+    accounts:[string]  
   )
 
   (defun add-whitelist-to-sale
     (
-      sale:string 
-      tier-data:[object{tier-whitelist-data}]
+      sale:string
+      tier-data:[object:{tier-whitelist-data}]
     )
-    @doc "Requires OPS. Adds the accounts to the whitelist for the given tier."
-    (with-read sales sale
-      { "tiers":= tiers }
-      (validate-whitelist-tier-data tiers tier-data)
+    @doc "Requires OPS. Adds the accounts to the whitelist for the given sale and tier."
+    (with-capability (OPS)
 
-      (with-capability (OPS)
+      (with-read sales sale
+        { "tiers":= tiers }
+        (validate-whitelist-tier-data tiers tier-data)
+
         (let
           (
-            (handle-tier-data 
-              (lambda (tier-data:object{tier-whitelist-data})
-                (bind tier-data
+            (handle-tier-data
+              (lambda (tier-wl-data:object{tier-whitelist-data})
+                (bind tier-wl-data
                   { "tier-id":= tier-id
                   , "accounts":= accounts
                   }
                   (map (add-to-whitelist sale tier-id) accounts)
-                )   
+                )
               )
             )
           )
@@ -339,13 +337,13 @@
     )
   )
 
-  (defun add-to-whitelist:string 
+  (defun add-to-whitelist:string
     (
-      sale:string 
+      sale:string
       tier-id:string
-      account:string 
+      account:string
     )
-    @doc "Requires private OPS. Adds the account to the whitelist for the given tier."
+    @doc "Requires private OPS. Adds the given account to the whitelist for the given tier."
     (require-capability (OPS))
 
     (insert whitelist-table (get-whitelist-id sale tier-id account)
@@ -357,67 +355,68 @@
     )
   )
 
-  (defun is-whitelisted:bool 
+  (defun is-whitelisted:bool
     (
-      sale:string 
-      tier-id:string 
+      sale:string
+      tier-id:string
       account:string
     )
     @doc "Returns true if the account is whitelisted for the given tier."
     (with-default-read whitelist-table (get-whitelist-id sale tier-id account)
       { "purchase-amount": -1.0 }
       { "purchase-amount":= purchase-amount }
-      (!= purchase-amount -1.0)
-    )
+      (>= purchase-amount 0.0)
+    )  
   )
 
-  (defun get-whitelist-purchase-amount:decimal
-    (
-      sale:string 
-      tier-id:string 
-      account:string
-    )
-    (with-default-read whitelist-table (get-whitelist-id sale tier-id account)
-      { "purchase-amount": -1.0 }
-      { "purchase-amount":= purchase-amount }
-      purchase-amount
-    )
-  )
-
-  (defun get-whitelist-id:string 
-    (
-      sale:string 
-      tier-id:string 
-      account:string
-    )
-    (concat [sale "|" tier-id "|" account])
-  )
-
-  (defcap WHITELIST_UPDATE () 
-    true
-  )
-
-  (defun update-whitelist-purchase-amount-ops:string 
+  (defun get-whitelisted-purchase-amount:decimal
     (
       sale:string
       tier-id:string
       account:string
-      purchase-amount:decimal
     )
-    @doc "Requires OPS. Updates the whitelist purchase amount for the given account."
+    @doc "Returns the current purchase amount for a whitelisted account in the given tier."
+    (with-default-read whitelist-table (get-whitelist-id sale tier-id account)
+      { "purchase-amount": -1.0 }
+      { "purchase-amount":= purchase-amount }
+      purchase-amount
+    )  
+  )
+
+  (defun get-whitelist-id:string
+    (
+      sale:string
+      tier-id:string
+      account:string
+    )  
+    (concat [sale "|" tier-id "|" account])
+  )
+
+  (defcap WHITELIST_UPDATE ()
+    true
+  )
+
+  (defun update-whitelist-purchase-amount-ops
+    (
+      sale:string
+      tier-id:string
+      account:string
+      amount:decimal
+    )
+    @doc "Require OPS. Updates the purchase amount for the given account in the given tier."
     (with-capability (OPS)
-      (update-whitelist-purchase-amount sale tier-id account purchase-amount)
+      (update-whitelist-purchase-amount sale tier-id account amount)  
     )
   )
 
-  (defun update-whitelist-purchase-amount 
+  (defun update-whitelist-purchase-amount:string
     (
-      sale:string 
-      tier-id:string 
-      account:string 
+      sale:string
+      tier-id:string
+      account:string
       amount:decimal
     )
-    @doc "Requires Whitelist Update. Updates the mint count for the given account in the whitelist."
+    @doc "Require Whitelist Update. Updates the purchase amount for the given account in the given tier."
     (require-capability (WHITELIST_UPDATE))
 
     (update whitelist-table (get-whitelist-id sale tier-id account)
@@ -425,7 +424,7 @@
     )
   )
 
-  (defun validate-whitelist-tier-data
+  (defun validate-whitelist-tier-data 
     (
       tiers:[object{tier}]
       tier-data:[object{tier-whitelist-data}]
@@ -434,29 +433,28 @@
     (let*
       (
         (filter-tier
-          (lambda (tier-id tier:object{tier})
+          (lambda (tier-id:string tier:object{tier})
             (= tier-id (at "tier-id" tier))
-          )  
+          )
         )
         (validate-tier-wl-data
           (lambda (wl-tier-data:object{tier-whitelist-data})
-            ;; Validate that the tier-id is valid
             (let
               (
                 (tier (filter (filter-tier (at "tier-id" wl-tier-data)) tiers))
-              )
+              )  
               (enforce 
-                (!= (length tier) 0) 
+                (>= (length tier) 1) 
                 (concat ["Couldn't find tier with id: " (at "tier-id" wl-tier-data)])
               )
               (enforce
-                (= (at "tier-type" (at 0 tier)) "WL")
+                (= (at "tier-type" (at 0 tier)) TIER_TYPE_WL)
                 "Can't add whitelisted accounts to a non-whitelist tier."
               )
             )
-          )  
+          )
         )
-      )  
+      )
       (map (validate-tier-wl-data) tier-data)
     )
   )
@@ -464,9 +462,10 @@
   ;; -------------------------------
   ;; Reserving
 
-  (defschema reservation ;; ID is sale|account
-    @doc "Stores a reservation for the toks, which is used to pay out the \
-    \ tokens once the sale is complete."
+  (defschema reservation
+    @doc "Stores a reservation for the token in a sale. \
+    \ Used to payout tokens onece the sale is complete. \
+    \ The ID is the 'sale|account'."
     sale:string
     account:string
     guard:guard
@@ -477,121 +476,109 @@
   (deftable reservations:{reservation})
 
   (defcap RESERVE ()
-    @doc "Reserve event for token reservation"
+    @doc "Reserve capability for a sale."
     (compose-capability (WHITELIST_UPDATE))
     (compose-capability (WITHDRAW))
     true
   )
 
-  (defcap RESERVE_EVENT
+  (defcap RESERVE_EVENT 
     (
-      sale:string 
-      account:string 
+      sale:string
+      account:string
       amount:decimal
     )
     @doc "Reservation can be found using the sale and the account"
     @event true
   )
 
-  (defun reserve:string 
+  (defun reserve:string
     (
-      sale:string 
-      account:string 
+      sale:string
+      account:string
       amount-fungible:decimal
     )
-    @doc "Reserve tokens for the given account."
+    @doc "Requires RESERVE. Reserve tokens for the given account."
     (enforce (> amount-fungible 0.0) "Amount must be greater than 0.")
 
     (with-capability (RESERVE)
-      (with-read sales sale 
+      (with-read sales sale
         { "total-supply":= total-supply
         , "total-sold":= total-sold
-        , "fungible-bank-account":= bank-account 
-        , "fungible-bank-guard":= fungible-bank-guard
+        , "fungible-bank-account":= fungible-bank-account
         , "status":= status
         , "tiers":= tiers
         , "fungible":= fungible:module{fungible-v2}
         , "token":= token:module{fungible-v2}
-        }
-        (enforce (= status SALE_STATUS_ACTIVE) "Sale is not active")
-        (bind (get-current-tier tiers) 
-          { "min-token":= purchase-min-token
-          , "max-token":= purchase-max-token
-          , "token-per-fungible":= token-per-fungible
-          , "tier-id":= tier-id
+        }  
+        (enforce (= status SALE_STATUS_ACTIVE) "Sale is not active.")
+        (bind (get-current-tier tiers)
+          { "tier-id":= tier-id
           , "tier-type":= tier-type
+          , "token-per-fungible":= token-per-fungible
+          , "min-token":= purchase-min-token
+          , "max-token":= purchase-max-token
           }
           (with-default-read reservations (get-reservation-id sale account)
             { "sale": sale
             , "account": account
-            , "guard": (at "guard" (fungible::details account)) 
+            , "guard": (at "guard" (fungible::details account))
             , "amount-token": 0.0
             , "amount-token-paid": 0.0
             , "is-paid": false
             }
-            { "amount-token":= curr-amount-token-purchased
+            { "amount-token":= amount-token-already-purchased
             , "guard":= guard
             }
             (let*
               (
-                (amount-token-wl-purchased (get-whitelist-purchase-amount sale tier-id account))
+                (amount-token-wl-purchased (get-whitelisted-purchase-amount sale tier-id account))
                 (amount-token-purchased (* amount-fungible token-per-fungible))
-                (amount-token-wl-purchased-total (+ amount-token-wl-purchased amount-token-purchased))
-                (amount-token-purchased-total (+ amount-token-purchased curr-amount-token-purchased))
+                (amount-token-wl-purchased-total (+ amount-token-purchased amount-token-wl-purchased))
+                (amount-token-purchased-total (+ amount-token-purchased amount-token-already-purchased))
               )
-              ;; Make sure that the amount being purchased isn't over the total supply
-              (enforce 
+              (enforce
                 (<= (+ total-sold amount-token-purchased) total-supply)
-                "Purchase amount exceeds total supply"
+                "Purchase amount exceeds total supply"  
               )
 
-              ;; If the tier is public, anyone can purchase
-              ;; If the curr-purchase-amount is -1, the account is not whitelisted
-              (enforce 
-                (or 
+              (enforce
+                (or
                   (= tier-type TIER_TYPE_PUBLIC)
-                  (!= amount-token-wl-purchased -1.0)
+                  (>= amount-token-wl-purchased 0.0)  
                 )
                 "Account is not whitelisted"
               )
 
-              ;; If the min or max is negative, we can ignore them
-              ;; Otherwise, enforce them
-              (enforce 
-                (or 
-                  (< purchase-min-token 0.0)
-                  (<= purchase-min-token amount-token-purchased-total)
-                )
+              (enforce
+                (or
+                  (< purchase-min-token 0.0) 
+                  (<= purchase-min-token amount-token-purchased-total) 
+                )  
                 "Purchase amount is less than minimum"
               )
-              (enforce 
-                (or 
-                  (< purchase-max-token 0.0)
-                  (>= purchase-max-token amount-token-purchased-total)
+              (enforce
+                (or
+                  (< purchase-max-token 0.0) 
+                  (>= purchase-max-token amount-token-purchased-total) 
                 )
                 "Purchase limit reached"
               )
-  
-              ;; If the tier is whitelist, the update the wl purchase amount
+
               (if (= tier-type TIER_TYPE_WL)
                 (update-whitelist-purchase-amount sale tier-id account amount-token-wl-purchased-total)
                 []
               )
-    
-              (fungible::transfer-create 
-                account 
-                bank-account 
-                fungible-bank-guard 
-                amount-fungible
-              )
-              
-              (reserve-internal 
-                sale 
-                account 
+
+              (fungible::transfer account fungible-bank-account amount-fungible)
+
+              (reserve-internal
+                sale
+                account
                 guard
-                curr-amount-token-purchased
+                amount-token-already-purchased
                 amount-token-purchased
-                total-sold
+                total-sold  
               )
             )
           )
@@ -600,22 +587,23 @@
     )
   )
 
-  (defun reserve-internal:bool
+  (defun reserve-internal:bool 
     (
-      sale:string 
-      account:string 
+      sale:string
+      account:string
       guard:guard
-      amount-token:decimal
+      amount-token-already-purchased:decimal
       amount-token-purchased:decimal
       total-sold:decimal
-    )
+    )  
+    @doc "Requires private RESERVE. Reserves the given amount of tokens for the given account."
     (require-capability (RESERVE))
 
     (update sales sale
-      { "total-sold": (+ total-sold amount-token-purchased) }
+      { "total-sold": (+ total-sold amount-token-purchased) }  
     )
-    ;; If the amount is 0, we need to insert a new reservation
-    (if (= amount-token 0.0)
+
+    (if (= amount-token-already-purchased 0.0)
       (insert reservations (get-reservation-id sale account)
         { "sale": sale
         , "account": account
@@ -626,33 +614,42 @@
         }
       )
       (update reservations (get-reservation-id sale account)
-        { "amount-token": (+ amount-token amount-token-purchased)
+        { "amount-token": (+ amount-token-already-purchased amount-token-purchased) 
         , "is-paid": false
         }
       )
     )
-    (emit-event 
+
+    (emit-event
       (RESERVE_EVENT sale account amount-token-purchased)
-    )
+    )  
+    
   )
 
   (defun get-reservation-id:string (sale:string account:string)
-    (concat [sale "|" account])  
+    (concat [sale "|" account])
   )
 
   (defun get-reservations-for-sale:[object{reservation}] (sale:string)
-    @doc "Get all reservations for specified sale"
-
-    (select reservations (where 'sale (= sale)))
+    (select reservations (where "sale" (= sale)))
   )
 
-  (defun get-reservation-for-account:object{reservation} 
+  (defun get-unpaid-reservations-for-sale:[object{reservation}] (sale:string)
+    (select reservations 
+      (and?
+        (where "sale" (= sale))
+        (where "is-paid" (= false))
+      )
+    )
+  )
+
+  (defun get-reservation-for-account:object{reservation}
     (
-      sale:string 
+      sale:string
       account:string
     )
-    @doc "Get all account reservations for specified sale"
-    
+    @doc "Get the account reservation for the specified sale"
+
     (with-default-read reservations (get-reservation-id sale account)
       { "sale": sale
       , "account": account
@@ -676,23 +673,12 @@
     )
   )
 
-  (defun get-unpaid-reservations-for-sale (sale:string)
-    @doc "Get all unpaid reservations for specified sale"
-
-    (select reservations 
-      (and? 
-        (where 'sale (= sale))
-        (where 'is-paid (= false))
-      )
-    )
-  )
-
-  (defun get-total-reserved-for-account:decimal 
+  (defun get-total-reserved-for-account:decimal
     (
-      sale:string 
+      sale:string
       account:string
-    )
-    @doc "Get total token reserved for account in specified sale"
+    )  
+    @doc "Get the total amount of tokens reserved for the given account for the given sale"
 
     (at "amount-token" (get-reservation-for-account sale account))
   )
@@ -700,50 +686,47 @@
   ;; -------------------------------
   ;; Payouts
 
-  (defun get-payout-accounts:[string] (sale:string)
-    @doc "Get all accounts that have a payout for the given sale"
-
-    (map 
-      (at "account") 
+  (defun get-payout-accounts-for-sale:[string] (sale:string)
+    @doc "Get all accounts that have a payout for the given sale."
+    (map
+      (at "account")
       (get-unpaid-reservations-for-sale sale)
     )
   )
 
   (defun payout-reservations:[string]
     (
-      sale:string 
+      sale:string
       accounts:[string]
-    )
-    @doc "Requires OPS. Pays out a reservations for the given sale \
-    \ to the provided list of accounts. Each account must be in the sale \
-    \ and have a reservation. Expects the sale bank to have enough tokens."
+    )  
+    @doc "Requires OPS. Pays out the reservations for the given accounts for the given sale. \
+    \ Each account must be in the sale and have a reservation. \
+    \ Expects the sale bank to have enough tokens."
     (with-capability (OPS)
       (with-read sales sale
-        { "token":= token }
-        (map 
-          (payout-reservation-internal 
-            sale 
-            token 
-            (get-token-bank-for-sale sale)
-          )
+        { "token":= token
+        , "token-bank-account":= token-bank-account
+        }
+        (map
+          (payout-reservation-internal sale token token-bank-account )
           accounts
         )
       )
     )
   )
 
-  (defun payout-reservation-internal:[string]
+  (defun payout-reservation-internal:string
     (
       sale:string
       token:module{fungible-v2}
       sender:string
       account:string
     )
-    @doc "Private function. Pays the given amount of tokens to the \
-    \ given account. Updates the amount paid for the reservation."
+    @doc "Private WITHDRAW function. Pays out the given account's reservation for the given sale. \
+    \ Updates the amount paid for the reservation."
     (require-capability (WITHDRAW))
 
-    (let 
+    (let
       (
         (reservation-id (get-reservation-id sale account))
       )
@@ -754,31 +737,26 @@
         }
         (let
           (
-            (trans-amount 
-              (floor 
-                (- amount-token amount-token-paid) 
+            (transfer-amount
+              (floor
+                (- amount-token amount-token-paid)  
                 (token::precision)
-              )
+              )  
             )
-          )
+          )  
 
-          (install-capability 
-            (token::TRANSFER 
+          (install-capability
+            (token::TRANSFER
               sender
               account
-              trans-amount
+              transfer-amount
             )
           )
-          (token::transfer-create 
-            sender 
-            account 
-            guard 
-            trans-amount
-          )
-  
+          (token::transfer-create sender account guard transfer-amount)
+
           (update reservations reservation-id
             { "amount-token-paid": amount-token
-            , "is-paid": true 
+            , "is-paid": true
             }
           )
         )
@@ -786,37 +764,32 @@
     )
   )
 
-  (defun withdraw-from-token-bank:string 
+  (defun withdraw-from-token-bank:string
     (
-      sale:string 
-      receiver:string 
+      sale:string
+      receiver:string
       amount:decimal
-    )
-    @doc "Requires Ops. Withdraws the given amount of tokens from \
-    \ the sale token bank to the given receiver. \
-    \ Expects the sale bank to have enough tokens."
+    )  
+    @doc "Requires OPS. Withdraws the given amount of tokens from the sale's token bank account. \
+    \ Expects that the receiver account exists."
     (with-capability (OPS)
       (with-read sales sale
         { "token":= token:module{fungible-v2}
-        , "token-bank-account":= bank-account
-        }
-        (install-capability 
-          (token::TRANSFER 
-            bank-account
+        , "token-bank-account":= token-bank-account
+        }  
+        (install-capability
+          (token::TRANSFER
+            token-bank-account
             receiver
             amount
           )
         )
-        (token::transfer
-          bank-account
-          receiver 
-          amount
-        )
+        (token::transfer token-bank-account receiver amount)
       )
     )
   )
-)
 
+)
 
 (if (read-msg "upgrade")
   "Contract upgraded"
@@ -824,15 +797,15 @@
     (create-table sales)
     (create-table whitelist-table)
     (create-table reservations)
-    (create-sale 
-      (read-msg "sale") 
+    (create-sale
+      (read-msg "sale")
       (read-keyset "bank-guard")
       coin
-      n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token
+      n_532057688806c2750b8907675929ffb2488e93c0.swag-token  
     )
-    (add-whitelist-to-sale 
-      (read-msg "sale-name")
-      (read-msg "tier-data")
+    (add-whitelist-to-sale
+        (at "name" (read-msg "sale"))
+        (read-msg "tier-data")
     )
   ]
 )

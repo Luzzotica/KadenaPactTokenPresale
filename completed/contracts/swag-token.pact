@@ -1,7 +1,7 @@
-(namespace "n_747f0d4342e6af9f3ce85b175da61bbc583582de")
+(namespace "n_532057688806c2750b8907675929ffb2488e93c0")
 
 ;; 1. Define your own keyset for governance
-(define-keyset "n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-gov")
+(define-keyset "n_532057688806c2750b8907675929ffb2488e93c0.swag-token-gov")
 
 (module swag-token GOV
 
@@ -24,35 +24,36 @@
 
   (defcap GOV ()
     ;; 2. Enforce the keyset you defined above for governance
-    (enforce-keyset "n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-gov")
+    (enforce-keyset "n_532057688806c2750b8907675929ffb2488e93c0.swag-token-gov")
   )
 
   ; --------------------------------------------------------------------------
   ; Tokenomics
 
   ;; 3. Build out the tokenomics initialization for your token
-  (defun init-token:string (init-data)
-    @doc "Initializes all of the tokenomics for this token"
+  (defun init-token:string (init-data:object)
+    @doc "Initialize the tokens for the contract"
 
     (with-capability (GOV)
       (let 
         (
           (sum-percent
-            (lambda (p:decimal account-data)
-              (+ p (at "percent" account-data))
-            )
+            (lambda (curr-percent:decimal account-data:object)
+              (+ curr-percent (at 'percent account-data))
+            )  
           )
           (init-token-account 
-            (lambda (initial-supply:decimal account-data)
-              (let 
+            (lambda (initial-supply:decimal account-data:object)
+              (let
                 (
-                  (account (at "account" account-data))
-                  (guard (at "guard" account-data))
-                  (percent (at "percent" account-data))
+                  (account (at 'account account-data))
+                  (percent (at 'percent account-data))
+                  (guard (at 'guard account-data))
                 )
-                (insert coin-table account
-                  { "balance": (* percent initial-supply)
-                  , "guard": guard
+                
+                (insert coin-table account 
+                  { "balance" : (* initial-supply percent)
+                  , "guard" : guard
                   }
                 )
               )
@@ -60,20 +61,25 @@
           )
         )
 
-        ; Step 1: Validate the percentages add up to 100%
+        ; Step 1: Validate the percentages
         ; fold iterations
         ; Iteration 1: Sum Percent with 0 and ROOT account -> (0 + 0.8) = 0.8
         ; Iteration 2: Sum Percent with 0.8 and LIQDUIDITY account -> (0.8 + 0.2) = 1.0
-        (enforce 
+        (enforce
           (= 
-            1.0 
-            (fold (sum-percent) 0.0 (at "accounts" init-data))
+            (fold 
+              (sum-percent) 
+              0.0 
+              (at "accounts" init-data)
+            )
+            1.0
           )
-          "Percentages must add up to 100%"
+          "Percentages must add up to 1.0"
         )
 
+        ; Step 2: Initialize the token accounts
         (map 
-          (init-token-account (at "initial-supply" init-data)) 
+          (init-token-account (at "initial-supply" init-data))
           (at "accounts" init-data)
         )
       )

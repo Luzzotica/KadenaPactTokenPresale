@@ -5,7 +5,7 @@
 
 (use basic-guards)
 (define-namespace 
-  "n_747f0d4342e6af9f3ce85b175da61bbc583582de" 
+  "n_532057688806c2750b8907675929ffb2488e93c0" 
   GUARD_SUCCESS 
   GUARD_SUCCESS
 )
@@ -18,10 +18,10 @@
 (env-keys ["gov" "ops"])
 (env-data
   {
-    "n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-gov": {
+    "n_532057688806c2750b8907675929ffb2488e93c0.swag-token-gov": {
       "keys": ["gov"], "pred": "keys-all"
     },
-    "n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-ops": {
+    "n_532057688806c2750b8907675929ffb2488e93c0.swag-token-ops": {
       "keys": ["ops"], "pred": "keys-all"
     },
     "init-data": { 

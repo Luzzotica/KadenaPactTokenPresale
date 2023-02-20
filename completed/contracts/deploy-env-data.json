@@ -1,0 +1,77 @@
+{
+  "n_532057688806c2750b8907675929ffb2488e93c0.swag-token-gov": {
+    "keys": [
+      "aeecd476ad8a4842ec84f3fbdad39b73fe7329fb4feaa3ea4367314a29a7e42b"
+    ],
+    "pred": "keys-all"
+  },
+  "n_532057688806c2750b8907675929ffb2488e93c0.swag-token-ops": {
+    "keys": [
+      "aeecd476ad8a4842ec84f3fbdad39b73fe7329fb4feaa3ea4367314a29a7e42b"
+    ],
+    "pred": "keys-all"
+  },
+  "init-data": {
+    "initial-supply": 10000.0,
+    "accounts": [
+      {
+        "account": "ROOT",
+        "percent": 0.8,
+        "guard": {
+          "keys": [
+            "aeecd476ad8a4842ec84f3fbdad39b73fe7329fb4feaa3ea4367314a29a7e42b"
+          ],
+          "pred": "keys-all"
+        }
+      },
+      {
+        "account": "LIQUIDITY",
+        "percent": 0.2,
+        "guard": {
+          "keys": [
+            "aeecd476ad8a4842ec84f3fbdad39b73fe7329fb4feaa3ea4367314a29a7e42b"
+          ],
+          "pred": "keys-all"
+        }
+      }
+    ]
+  },
+  "sale": {
+    "name": "swag-token-sale",
+    "token-name": "swag-token",
+    "total-supply": 5000.0,
+    "tiers": [
+      {
+        "tier-id": "Discount",
+        "tier-type": "WL",
+        "start-time": {"time": "2023-02-10T00:00:00Z"},
+        "end-time": {"time": "2023-02-11T00:00:00Z"},
+        "token-per-fungible": 10.0,
+        "min-token": 1.0,
+        "max-token": 100.0
+      },
+      {
+        "tier-id": "Public",
+        "tier-type": "PUBLIC",
+        "start-time": {"time": "2023-02-11T00:00:00Z"},
+        "end-time": {"time": "2023-02-11T00:00:00Z"},
+        "token-per-fungible": 100.0,
+        "min-token": 1.0,
+        "max-token": -1.0
+      }
+    ]
+  },
+  "bank-guard": {
+    "keys": [
+      "591649bce0c4a59edb6608ec09046457a35ba2983f999b89945b3ba3b596c0c7"
+    ],
+    "pred": "keys-all"
+  },
+  "tier-data": [
+    {
+      "tier-id": "Discount",
+      "accounts": ["k:aeecd476ad8a4842ec84f3fbdad39b73fe7329fb4feaa3ea4367314a29a7e42b"]
+    }
+  ],
+  "upgrade": false
+}

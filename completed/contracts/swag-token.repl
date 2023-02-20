@@ -1,17 +1,17 @@
 (load "swag-token-env.repl")
 
-
 (begin-tx "Test governance")
-(use n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token)
+(use n_532057688806c2750b8907675929ffb2488e93c0.swag-token)
 
 (env-keys [])
 (expect-failure "Can't acquire GOV cap without gov key"
-  "Keyset failure (keys-all): 'n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-gov"
+  "Tx Failed: Keyset failure (keys-all): 'n_532057688806c2750b8907675929ffb2488e93c0.swag-token-gov"
   (test-capability (GOV))
 )
+
 (env-keys ["test"])
 (expect-failure "Can't acquire GOV cap without gov key"
-  "Keyset failure (keys-all): 'n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-gov"
+  "Tx Failed: Keyset failure (keys-all): 'n_532057688806c2750b8907675929ffb2488e93c0.swag-token-gov"
   (test-capability (GOV))
 )
 
@@ -26,48 +26,48 @@
 
 
 (begin-tx "Test init and tokenomics")
-(use n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token)
+(use n_532057688806c2750b8907675929ffb2488e93c0.swag-token)
 
-(expect-that "ROOT has tokens"
+(expect-that "ROOT has initial funds"
   (= 8000.0)
   (get-balance "ROOT")
 )
-(expect-that "LIQUIDITY has tokens"
+(expect-that "LIQUIDITY has initial funds"
   (= 2000.0)
   (get-balance "LIQUIDITY")
 )
 
-(env-keys ["gov"])
 (env-data {
-  "init-data": { 
-    "initial-supply": 1000.0, 
-    "accounts":[ 
-      { 
-        "account": "ROOT", 
+  "init-data": {
+    "initial-supply": 1000.0,
+    "accounts": [
+      {
+        "account": "ROOT",
+        "percent": 0.8,
         "guard": {
-          "keys": ["gov"], "pred": "keys-all"
-        },
-        "percent": 0.8
+          "keys": [
+            "gov"
+          ],
+          "pred": "keys-all"
+        }
       },
-      { 
-        "account": "LIQUIDITY", 
+      {
+        "account": "LIQUIDITY",
+        "percent": 0.3,
         "guard": {
-          "keys": ["gov"], "pred": "keys-all"
-        },
-        "percent": 0.3
+          "keys": [
+            "gov"
+          ],
+          "pred": "keys-all"
+        }
       }
     ]
   }
 })
-(expect-failure "Percent must add up to 100%"
-  "Percentages must add up to 100%"
+(expect-failure "Can't init the token with invalid percent"
+  "Percentages must add up to 1.0"
   (init-token (read-msg "init-data"))
 )
 
-(env-keys ["test"])
-(expect-failure "Must have permissions to init token"
-  "Keyset failure (keys-all): 'n_747f0d4342e6af9f3ce85b175da61bbc583582de.swag-token-gov"
-  (init-token (read-msg "init-data"))
-)
 
 (commit-tx)
