@@ -65,7 +65,7 @@ export const kadenaSlice = createSlice({
   },
 })
 
-export const { 
+export const {
   setNetwork, setNetworkId, setAccount, setPubKey, 
   addTransaction, setNewTransaction, addMessage, setNewMessage
 } = kadenaSlice.actions;

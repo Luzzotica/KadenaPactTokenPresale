@@ -366,7 +366,7 @@
       { "purchase-amount": -1.0 }
       { "purchase-amount":= purchase-amount }
       (>= purchase-amount 0.0)
-    )  
+    )
   )
 
   (defun get-whitelisted-purchase-amount:decimal

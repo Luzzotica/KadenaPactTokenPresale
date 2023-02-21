@@ -123,7 +123,7 @@ export const initAccountData = (chainId, account) => {
       dispatch(saleSlice.actions.setWhitelistInfo(whitelistData));
     }
     else {
-      toast.error(`Failed to load user data, error: ${result.message}.`);
+      toast.error(`Failed to load account data, error: ${result.message}.`);
       return;
     }
   }
